@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.npmrc
+
+# macOS Finder metadata
+.DS_Store
