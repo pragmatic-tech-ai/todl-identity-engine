@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Graph, Builder, Repository } from "@pragmatic-tech-ai/todl";
+import { Graph, Builder, Repository, MetaKind } from "@pragmatic-tech-ai/todl";
 import { PolicyCatalog, PolicyEffect, PolicyActionKind } from "../policy-catalog.js";
 
 class PolicyCatalogFixture
@@ -20,6 +20,15 @@ class PolicyCatalogFixture
         builder.defineConcept(PolicyCatalogFixture.Concept);
         builder.definePolicy(`${PolicyCatalogFixture.Concept}@policy`, PolicyCatalogFixture.Concept, rulesJson);
         builder.commit();
+        return new Repository(graph);
+    }
+
+    /** A policy node carrying the concept attr but no rules attr (cloned from a built node, rules stripped). */
+    public static BuildWithoutRules(): Repository
+    {
+        const built = PolicyCatalogFixture.Build("[]").resolve(`${PolicyCatalogFixture.Concept}@policy`)!;
+        const graph = new Graph();
+        graph.addNode({ ...built, metaKind: MetaKind.Policy, attrs: new Map([[Builder.PolicyConceptAttr, PolicyCatalogFixture.Concept]]) });
         return new Repository(graph);
     }
 }
@@ -47,5 +56,19 @@ test("PolicyCatalog fails closed on an unknown effect", () =>
         { effect: "maybe", action: "read", predicate: PolicyCatalogFixture.Predicate("eu") },
     ]);
     const repo = PolicyCatalogFixture.Build(rulesJson);
-    assert.throws(() => PolicyCatalog.FromRepository(repo));
+    assert.throws(() => PolicyCatalog.FromRepository(repo), /unknown effect "maybe"/);
+});
+
+test("PolicyCatalog fails closed on an unknown action", () =>
+{
+    const rulesJson = JSON.stringify([
+        { effect: "allow", action: "approve", predicate: PolicyCatalogFixture.Predicate("eu") },
+    ]);
+    const repo = PolicyCatalogFixture.Build(rulesJson);
+    assert.throws(() => PolicyCatalog.FromRepository(repo), /unknown action "approve"/);
+});
+
+test("PolicyCatalog fails closed when the rules attribute is missing", () =>
+{
+    assert.throws(() => PolicyCatalog.FromRepository(PolicyCatalogFixture.BuildWithoutRules()), /missing concept or rules/);
 });
