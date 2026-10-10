@@ -44,7 +44,8 @@ export class PolicyCatalog
         for (const id of repo.nodesOfMetaKind(MetaKind.Policy))
         {
             const node: Node | undefined = repo.resolve(id);
-            if (node === undefined) continue;
+            // Fail-closed guard for an unreachable case: the id was just enumerated from this graph.
+            if (node === undefined) throw new Error(`policy node "${id}" did not resolve`);
             const concept = node.attrs.get(Builder.PolicyConceptAttr);
             const rulesRaw = node.attrs.get(Builder.PolicyRulesAttr);
             if (concept === undefined || rulesRaw === undefined)
