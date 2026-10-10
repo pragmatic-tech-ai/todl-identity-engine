@@ -46,7 +46,7 @@ class CrmHarness
     private static readonly Deny = "deny";
     private static readonly ReadAction = "read";
     private static readonly UserId = "u1";
-    private static readonly TenantName = CrmHarness.TenantName;
+    private static readonly TenantName = "Acme";
     private static readonly SalesGroup = "sales";
     private static readonly Meta = `namespace crm
 {
