@@ -101,3 +101,86 @@ test("no rules for the action allows all", () =>
     const p = PolicyPredicateCompiler.CompileRuleSet(rules, PolicyActionKind.Write, Fixture.Principal());
     assert.equal(p.Matches(Fixture.View({ region: "us" })), true);
 });
+
+class Extra
+{
+    public static Neq(member: string, value: string): PolicyPredicate
+    {
+        return {
+            kind: PolicyNodeKind.Compare,
+            op: PolicyCompareOp.Neq,
+            left: { kind: PolicyNodeKind.Ref, root: PolicyRefRoot.Entity, member },
+            right: { kind: PolicyNodeKind.Literal, value },
+        };
+    }
+
+    public static Bool(op: PolicyBoolOp, left: PolicyPredicate, right: PolicyPredicate): PolicyPredicate
+    {
+        return { kind: PolicyNodeKind.Bool, op, left, right };
+    }
+
+    public static HasAdmins(): PolicyPredicate
+    {
+        return {
+            kind: PolicyNodeKind.Membership,
+            collection: { kind: PolicyNodeKind.Ref, root: PolicyRefRoot.Principal, member: "groups" },
+            item: { kind: PolicyNodeKind.Literal, value: "admins" },
+        };
+    }
+}
+
+test("only deny rules: non-denied passes, denied drops", () =>
+{
+    const rules = [Fixture.Rule(PolicyEffect.Deny, PolicyActionKind.Read, Fixture.EntityEq("tier", "free"))];
+    const p = PolicyPredicateCompiler.CompileRuleSet(rules, PolicyActionKind.Read, Fixture.Principal());
+    assert.equal(p.Matches(Fixture.View({ tier: "paid" })), true);
+    assert.equal(p.Matches(Fixture.View({ tier: "free" })), false);
+});
+
+test("Neq compare", () =>
+{
+    const c = PolicyPredicateCompiler.Compile(Extra.Neq("region", "us"), Fixture.Principal());
+    assert.equal(c.Matches(Fixture.View({ region: "eu" })), true);
+    assert.equal(c.Matches(Fixture.View({ region: "us" })), false);
+});
+
+test("And requires both, Or requires either", () =>
+{
+    const a = Fixture.EntityEq("a", "1");
+    const b = Fixture.EntityEq("b", "2");
+    const and = PolicyPredicateCompiler.Compile(Extra.Bool(PolicyBoolOp.And, a, b), Fixture.Principal());
+    const or = PolicyPredicateCompiler.Compile(Extra.Bool(PolicyBoolOp.Or, a, b), Fixture.Principal());
+    assert.equal(and.Matches(Fixture.View({ a: "1", b: "2" })), true);
+    assert.equal(and.Matches(Fixture.View({ a: "1", b: "x" })), false);
+    assert.equal(and.Matches(Fixture.View({ a: "x", b: "2" })), false);
+    assert.equal(or.Matches(Fixture.View({ a: "1", b: "x" })), true);
+    assert.equal(or.Matches(Fixture.View({ a: "x", b: "2" })), true);
+    assert.equal(or.Matches(Fixture.View({ a: "x", b: "x" })), false);
+});
+
+test("two allow rules fuse as Or", () =>
+{
+    const rules = [
+        Fixture.Rule(PolicyEffect.Allow, PolicyActionKind.Read, Fixture.EntityEq("region", "eu")),
+        Fixture.Rule(PolicyEffect.Allow, PolicyActionKind.Read, Fixture.EntityEq("region", "us")),
+    ];
+    const p = PolicyPredicateCompiler.CompileRuleSet(rules, PolicyActionKind.Read, Fixture.Principal());
+    assert.equal(p.Matches(Fixture.View({ region: "eu" })), true);
+    assert.equal(p.Matches(Fixture.View({ region: "us" })), true);
+    assert.equal(p.Matches(Fixture.View({ region: "apac" })), false);
+});
+
+test("Not wrapping a membership", () =>
+{
+    const pred: PolicyPredicate = { kind: PolicyNodeKind.Not, operand: Extra.HasAdmins() };
+    const view = Fixture.View({});
+    const without = new Principal("u2", "t1", PrincipalKind.User, new Map<string, string>(), []);
+    assert.equal(PolicyPredicateCompiler.Compile(pred, Fixture.Principal()).Matches(view), false);
+    assert.equal(PolicyPredicateCompiler.Compile(pred, without).Matches(view), true);
+});
+
+test("absent entity field in Eq is false", () =>
+{
+    const c = PolicyPredicateCompiler.Compile(Fixture.EntityEq("missing", "x"), Fixture.Principal());
+    assert.equal(c.Matches(Fixture.View({})), false);
+});
