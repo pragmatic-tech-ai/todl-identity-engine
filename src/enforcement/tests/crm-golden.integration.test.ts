@@ -14,8 +14,8 @@ class CrmSource extends ModelDataSource
     public constructor(doc: TodlDocument)
     {
         super();
-        this.modelName = "crm";
-        this.modelVersion = "1";
+        this.modelName = CrmHarness.ModelName;
+        this.modelVersion = CrmHarness.ModelVersion;
         this.loadDocument(doc);
     }
 }
@@ -39,6 +39,15 @@ class CrmHarness
     public static readonly Open = "open";
     public static readonly TenantId = "t1";
     public static readonly IdSeparator = "#";
+    public static readonly ModelName = "crm";
+    public static readonly ModelVersion = "1";
+    private static readonly ModelUri = "crm.todl";
+    private static readonly Allow = "allow";
+    private static readonly Deny = "deny";
+    private static readonly ReadAction = "read";
+    private static readonly UserId = "u1";
+    private static readonly TenantName = CrmHarness.TenantName;
+    private static readonly SalesGroup = "sales";
     private static readonly Meta = `namespace crm
 {
     concept Customer { customer_id : string; region : string; tier : string; }
@@ -53,14 +62,14 @@ class CrmHarness
 
     public constructor(regionClaim: string)
     {
-        const model = check([{ uri: "crm.todl", text: CrmHarness.Meta }]).model;
+        const model = check([{ uri: CrmHarness.ModelUri, text: CrmHarness.Meta }]).model;
         const b = model.builder();
         b.definePolicy(`${CrmHarness.Customer}@policy`, CrmHarness.Customer, CrmHarness.CustomerRules());
         b.definePolicy(`${CrmHarness.Order}@policy`, CrmHarness.Order, CrmHarness.OrderRules());
         b.commit();
         this.baseDoc = toJSON(model);
-        const principal = new Principal("u1", CrmHarness.TenantId, PrincipalKind.User, new Map([[CrmHarness.Region, regionClaim]]), ["sales"]);
-        const tenant = new Tenant(CrmHarness.TenantId, TenantKind.Saas, "Acme");
+        const principal = new Principal(CrmHarness.UserId, CrmHarness.TenantId, PrincipalKind.User, new Map([[CrmHarness.Region, regionClaim]]), [CrmHarness.SalesGroup]);
+        const tenant = new Tenant(CrmHarness.TenantId, TenantKind.Saas, CrmHarness.TenantName);
         const context = new AccessContext(principal, tenant, [], new FusionAccessPolicy(PolicyCatalog.FromRepository(model)));
         this.Enforcement = IdentityEnforcement.ForRepository(model, context, Action.Read);
         this.Factory.Adapter.Seed(CrmHarness.CustomersSource, [
@@ -78,7 +87,7 @@ class CrmHarness
 
     private static Rule(effect: string, left: object, right: object): object
     {
-        return { effect, action: "read", predicate: { kind: 2, op: 0, left, right } };
+        return { effect, action: CrmHarness.ReadAction, predicate: { kind: 2, op: 0, left, right } };
     }
 
     private static Entity(member: string): object
@@ -89,15 +98,15 @@ class CrmHarness
     private static CustomerRules(): string
     {
         return JSON.stringify([
-            CrmHarness.Rule("allow", CrmHarness.Entity(CrmHarness.Region), { kind: 0, root: 0, member: CrmHarness.Region }),
-            CrmHarness.Rule("deny", CrmHarness.Entity(CrmHarness.Tier), { kind: 1, value: CrmHarness.Free })
+            CrmHarness.Rule(CrmHarness.Allow, CrmHarness.Entity(CrmHarness.Region), { kind: 0, root: 0, member: CrmHarness.Region }),
+            CrmHarness.Rule(CrmHarness.Deny, CrmHarness.Entity(CrmHarness.Tier), { kind: 1, value: CrmHarness.Free })
         ]);
     }
 
     private static OrderRules(): string
     {
         return JSON.stringify([
-            CrmHarness.Rule("allow", CrmHarness.Entity(CrmHarness.Status), { kind: 1, value: CrmHarness.Open })
+            CrmHarness.Rule(CrmHarness.Allow, CrmHarness.Entity(CrmHarness.Status), { kind: 1, value: CrmHarness.Open })
         ]);
     }
 
@@ -111,7 +120,7 @@ class CrmHarness
     private Plan(): ModelConnectorPlan
     {
         return {
-            Model: "crm", Version: "1",
+            Model: CrmHarness.ModelName, Version: CrmHarness.ModelVersion,
             Connectors: [{ Name: CrmHarness.Connector, Kind: DataSourceKind.Sql, Config: {} }],
             Bindings: [
                 CrmHarness.Binding(CrmHarness.Customer, CrmHarness.CustomersSource, CrmHarness.CustomerId, [CrmHarness.CustomerId, CrmHarness.Region, CrmHarness.Tier]),
