@@ -117,7 +117,7 @@ test("only the allow Eq is pushed to the connector; the deny Neq is not", async 
     const pushedIds = doc.nodes
         .filter((n) => n.type === ConnectorHarness.Concept && n.tier === ConnectorHarness.InstanceTier)
         .map((n) => n.storageId).sort();
-assert.deepEqual(pushedIds, ["C1", "C2", "C4"]);
+    assert.deepEqual(pushedIds, ["C1", "C2", "C4"]);
 });
 
 test("the in-memory filter is authoritative: deny drops C2, null-tier C4 survives", async () =>
@@ -132,7 +132,10 @@ test("push-on and push-off yield the identical surviving set", async () =>
     const on = new ConnectorHarness();
     const off = new ConnectorHarness();
     const survived = on.Survivors(await on.Prepare(true));
-    const survivedNoPush = off.Survivors(await off.Prepare(false));
+    const offDoc = await off.Prepare(false);
+    const survivedNoPush = off.Survivors(offDoc);
     assert.equal(off.Factory.Adapter.Requests.at(-1)!.Where, undefined);
+    const fetched = offDoc.nodes.filter((n) => n.type === ConnectorHarness.Concept && n.tier === ConnectorHarness.InstanceTier);
+    assert.equal(fetched.length, 4);
     assert.deepEqual(survivedNoPush, survived);
 });

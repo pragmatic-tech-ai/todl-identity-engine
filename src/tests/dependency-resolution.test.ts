@@ -3,8 +3,9 @@ import assert from "node:assert/strict";
 
 // Baseline resolution guard: both core packages must resolve from their root
 // barrels (compiled dist). This pins the bridge's two file: dependencies and the
-// transitive todl-runtime registry dependency. The bridge imports nothing from
-// deep subpaths of todl.
+// transitive todl-runtime registry dependency. The bridge sources import nothing from
+// deep subpaths of todl; todl-runtime is only a test-only devDependency, used via its
+// root barrel by the connector integration test.
 import { MetaKind, PolicyPredicateCodec, Repository } from "@pragmatic-tech-ai/todl";
 import { ResourceAuthorizationPolicy, Action, Principal } from "@pragmatic-tech-ai/todl-identity";
 
