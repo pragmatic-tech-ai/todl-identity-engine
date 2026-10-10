@@ -31,7 +31,8 @@
     "@types/node": "^22.20.1",
     "rimraf": "^6.0.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "@pragmatic-tech-ai/todl-runtime": "^0.7.0"
   },
   "dependencies": {
     "@pragmatic-tech-ai/todl": "file:../TODL",
