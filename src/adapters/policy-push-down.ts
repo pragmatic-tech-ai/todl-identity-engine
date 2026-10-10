@@ -39,7 +39,12 @@ export class PolicyPushDown
             if (cmp === undefined) return undefined;
             all.push(cmp);
         }
-        return { All: all };
+        // Eq-only: the in-memory predicate uses JS !==, so a null/missing field on a Neq is TRUE (row kept),
+        // while the connector's SQL three-valued logic drops null for Neq. Pushing a Neq would hide admitted
+        // rows; only Eq agrees on nulls. Dropped conjuncts widen to a sound superset the in-memory filter trims.
+        const eqOnly = all.filter((c) => c.Op === QueryCompareOp.Eq);
+        if (eqOnly.length === 0) return undefined;
+        return { All: eqOnly };
     }
 
     private static Conjuncts(predicate: PolicyPredicate): PolicyPredicate[] | undefined

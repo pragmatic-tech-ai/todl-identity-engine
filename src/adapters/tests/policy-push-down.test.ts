@@ -81,22 +81,17 @@ test("single allow eq pushes Eq", () =>
     assert.deepEqual(PushFixture.Push([PushFixture.Rule(PolicyEffect.Allow, PushFixture.EqLit("region", "eu"))]), { All: [EuEq] });
 });
 
-test("single deny pushes negation", () =>
+test("only Eq-resulting comparisons are pushed", () =>
 {
-    assert.deepEqual(PushFixture.Push([PushFixture.Rule(PolicyEffect.Deny, PushFixture.EqLit("region", "us"))]),
-        { All: [{ Field: "region", Op: QueryCompareOp.Neq, Value: "us" }] });
-    const neq = PushFixture.Cmp(PolicyCompareOp.Neq, PushFixture.Entity("region"), PushFixture.Lit("us"));
-    assert.deepEqual(PushFixture.Push([PushFixture.Rule(PolicyEffect.Deny, neq)]),
+    const neq = (v: string): PolicyPredicate => PushFixture.Cmp(PolicyCompareOp.Neq, PushFixture.Entity("region"), PushFixture.Lit(v));
+    assert.equal(PushFixture.Push([PushFixture.Rule(PolicyEffect.Allow, neq("eu"))]), undefined);
+    assert.equal(PushFixture.Push([PushFixture.Rule(PolicyEffect.Deny, PushFixture.EqLit("region", "us"))]), undefined);
+    assert.deepEqual(PushFixture.Push([PushFixture.Rule(PolicyEffect.Deny, neq("us"))]),
         { All: [{ Field: "region", Op: QueryCompareOp.Eq, Value: "us" }] });
-});
-
-test("allow plus deny contributes both", () =>
-{
-    const f = PushFixture.Push([
+    assert.deepEqual(PushFixture.Push([
         PushFixture.Rule(PolicyEffect.Allow, PushFixture.EqLit("region", "eu")),
         PushFixture.Rule(PolicyEffect.Deny, PushFixture.EqLit("region", "us")),
-    ]);
-    assert.deepEqual(f, { All: [EuEq, { Field: "region", Op: QueryCompareOp.Neq, Value: "us" }] });
+    ]), { All: [EuEq] });
 });
 
 test("two allow rules are not pushed", () =>
