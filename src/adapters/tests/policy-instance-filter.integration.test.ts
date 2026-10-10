@@ -69,3 +69,55 @@ test("policy filter gates Instances and entity(id) on a real ModelDataSource; un
     source.UseInstanceFilter(undefined);
     assert.equal(source.Instances(FilterFixture.Concept).length, 3);
 });
+
+class TwoConceptFixture
+{
+    public static readonly Account = "account";
+    public static readonly Order = "order";
+    public static readonly Region = "region";
+    public static readonly Status = "status";
+    public static readonly Open = "open";
+
+    public static Build(): { Catalog: PolicyCatalog; Doc: TodlDocument }
+    {
+        const r = new Repository();
+        const b = r.builder();
+        b.definePrimitive("string");
+        TwoConceptFixture.Define(b, TwoConceptFixture.Account, TwoConceptFixture.Region, "eu",
+            [["acme", "eu"], ["globex", "us"], ["initech", "eu"]]);
+        TwoConceptFixture.Define(b, TwoConceptFixture.Order, TwoConceptFixture.Status, TwoConceptFixture.Open,
+            [["o1", "open"], ["o2", "closed"], ["o3", "open"]]);
+        b.commit();
+        return { Catalog: PolicyCatalog.FromRepository(r), Doc: toJSON(r) };
+    }
+
+    private static Define(b: ReturnType<Repository["builder"]>, concept: string, field: string, allowed: string, rows: [string, string][]): void
+    {
+        b.defineConcept(concept);
+        b.addField(concept, field, "string");
+        for (const [id, value] of rows)
+        {
+            b.assertInstance(concept, id);
+            b.setField(id, field, value);
+        }
+        const predicate = { kind: 2, op: 0, left: { kind: 0, root: 1, member: field }, right: { kind: 1, value: allowed } };
+        b.definePolicy(`${concept}@policy`, concept, JSON.stringify([{ effect: "allow", action: "read", predicate }]));
+    }
+}
+
+test("one filter over two concepts with different policies does not bleed the memoized predicate", () =>
+{
+    const fixture = TwoConceptFixture.Build();
+    const policy = new FusionAccessPolicy(fixture.Catalog);
+    const principal = new Principal("u1", FilterFixture.TenantId, PrincipalKind.User, new Map(), []);
+    const tenant = new Tenant(FilterFixture.TenantId, TenantKind.Saas, "Acme");
+    const context = new AccessContext(principal, tenant, [], policy);
+    const source = new FilterSource(fixture.Doc);
+    source.UseInstanceFilter(new PolicyAccessInstanceFilter(policy, context, Action.Read));
+
+    const ids = (concept: string): string[] => source.Instances(concept).map((e) => e.id).sort();
+    assert.deepEqual(ids(TwoConceptFixture.Account), ["acme", "initech"]);
+    assert.deepEqual(ids(TwoConceptFixture.Order), ["o1", "o3"]);
+    assert.deepEqual(ids(TwoConceptFixture.Account), ["acme", "initech"]);
+    assert.deepEqual(ids(TwoConceptFixture.Order), ["o1", "o3"]);
+});
