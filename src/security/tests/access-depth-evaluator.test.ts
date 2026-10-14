@@ -107,7 +107,8 @@ test("Organization allows without consulting ownership", () =>
     const p = Fixture.Principal([["r", "org"]]);
     const noRuleView: IInstanceView = { Concept: "shop.NoRule", Field: () => undefined };
     assert.equal(e.EffectiveLevel(p, PrivilegeAction.Read, "shop.NoRule"), AccessLevel.None); // no privilege for that concept
-    // grant org on that concept explicitly:
+    // Granting Org on shop.NoRule (a concept with NO ownership rule) and still getting true demonstrates the
+    // Organization short-circuit: ownership is never resolved.
     const e2 = AccessDepthEvaluator.FromConfig(Fixture.Config({
         roles: [{ id: "org-any", name: "Org Any", privileges: [{ action: PrivilegeAction.Read, concept: "shop.NoRule", level: AccessLevel.Organization }] }],
         roleAssignment: { claimsMapping: [{ claim: "r", value: "org", roles: ["org-any"] }], overrides: [], teamRoles: [] },
@@ -208,4 +209,27 @@ test("fail-closed: malformed roles throw MalformedRolesError", () =>
 test("SP-2 malformed config still throws SP-2's error through FromConfig", () =>
 {
     assert.throws(() => AccessDepthEvaluator.FromConfig(Fixture.Config({ businessUnits: [] })), MalformedBusinessUnitTreeError);
+});
+
+test("duplicate override principal fails closed", () =>
+{
+    assert.throws(() => AccessDepthEvaluator.FromConfig(Fixture.Config({
+        roleAssignment: { claimsMapping: [], overrides: [{ principalId: "u1", roles: [] }, { principalId: "u1", roles: ["user-reader"] }], teamRoles: [] },
+    })), MalformedRolesError);
+});
+
+test("BusinessUnitAndChildren includes the principal's own home BU (reflexive Contains)", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config({
+        roleAssignment: { claimsMapping: [{ claim: "r", value: "children", roles: ["children-reader"] }], overrides: [], teamRoles: [] },
+    }));
+    const p = Fixture.Principal([["dept", "eng"], ["r", "children"]]); // home BU = eng
+    assert.equal(e.Allows(p, PrivilegeAction.Read, Fixture.View({ owner: "x", bu: "eng" })), true); // own home BU
+});
+
+test("BusinessUnit denies a child of a team BU (exact match only)", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config());
+    const p = Fixture.Principal([["dept", "eng"], ["r2", "bu"]]); // home eng, team t-field (BU field); bu-reader (BU)
+    assert.equal(e.Allows(p, PrivilegeAction.Read, Fixture.View({ owner: "x", bu: "field-west" })), false); // field-west is a child of team BU field; BU level is exact
 });

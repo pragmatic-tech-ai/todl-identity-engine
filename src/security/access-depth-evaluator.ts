@@ -30,6 +30,7 @@ export class AccessDepthEvaluator
     private static readonly UnknownLevelMessage = "privilege has an unknown level in role: ";
     private static readonly UnknownRoleRefMessage = "role assignment references an unknown role: ";
     private static readonly UnknownTeamRefMessage = "team-role grant references an unknown team: ";
+    private static readonly DuplicateOverrideMessage = "role assignment has a duplicate override for principal: ";
 
     private constructor(
         private readonly model: TenantSecurityModel,
@@ -231,8 +232,14 @@ export class AccessDepthEvaluator
         {
             AccessDepthEvaluator.AssertKnownRoles(rule.roles, rolesById);
         }
+        const seenPrincipals = new Set<string>();
         for (const override of assignment.overrides)
         {
+            if (seenPrincipals.has(override.principalId))
+            {
+                throw new MalformedRolesError(AccessDepthEvaluator.DuplicateOverrideMessage + override.principalId);
+            }
+            seenPrincipals.add(override.principalId);
             AccessDepthEvaluator.AssertKnownRoles(override.roles, rolesById);
         }
         for (const grant of assignment.teamRoles)
