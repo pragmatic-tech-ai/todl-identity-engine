@@ -7,3 +7,4 @@ export { PolicyAccessInstanceFilter } from "./adapters/policy-instance-filter.js
 export { PolicyPushDown } from "./adapters/policy-push-down.js";
 export { PolicyQueryFilterProvider } from "./adapters/policy-query-filter-provider.js";
 export { IdentityEnforcement } from "./enforcement/identity-enforcement.js";
+export { BusinessUnitHierarchy, MalformedBusinessUnitTreeError } from "./security/business-unit-hierarchy.js";
