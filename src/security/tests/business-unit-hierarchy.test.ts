@@ -79,3 +79,21 @@ test("a duplicate id is malformed", () =>
 {
     assert.throws(() => BusinessUnitHierarchy.FromConfig([{ id: "root", name: "Root" }, { id: "root", name: "Dup" }]), MalformedBusinessUnitTreeError);
 });
+
+test("a root-less cycle (zero roots) is malformed", () =>
+{
+    assert.throws(() => BusinessUnitHierarchy.FromConfig([{ id: "a", name: "A", parent: "b" }, { id: "b", name: "B", parent: "a" }]), MalformedBusinessUnitTreeError);
+});
+
+test("a self-parent is malformed", () =>
+{
+    assert.throws(() => BusinessUnitHierarchy.FromConfig([{ id: "root", name: "Root" }, { id: "a", name: "A", parent: "a" }]), MalformedBusinessUnitTreeError);
+});
+
+test("query methods reject an unknown business unit", () =>
+{
+    const h = BusinessUnitHierarchy.FromConfig([{ id: "root", name: "Root" }]);
+    assert.throws(() => h.AncestorsOf("ghost"), MalformedBusinessUnitTreeError);
+    assert.throws(() => h.DescendantsOf("ghost"), MalformedBusinessUnitTreeError);
+    assert.throws(() => h.Contains("ghost", "root"), MalformedBusinessUnitTreeError);
+});

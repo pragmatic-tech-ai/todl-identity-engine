@@ -69,12 +69,7 @@ export class BusinessUnitHierarchy
             throw new MalformedBusinessUnitTreeError(BusinessUnitHierarchy.RootCountMessage + rootCount);
         }
         BusinessUnitHierarchy.AssertConnectedAcyclic(root, children, parents.size);
-        const frozenChildren = new Map<string, readonly string[]>();
-        for (const [id, kids] of children)
-        {
-            frozenChildren.set(id, kids);
-        }
-        return new BusinessUnitHierarchy(root, parents, frozenChildren);
+        return new BusinessUnitHierarchy(root, parents, children);
     }
 
     // A single-rooted tree reaches every node from the root exactly once; anything else is a cycle
@@ -86,9 +81,11 @@ export class BusinessUnitHierarchy
         while (queue.length > 0)
         {
             const id = queue.shift() as string;
+            // Each node has exactly one parent, so a node is never enqueued twice; this guard only
+            // bounds the loop. The seen.size !== nodeCount check below is the actual cycle/disconnection detector.
             if (seen.has(id))
             {
-                throw new MalformedBusinessUnitTreeError(BusinessUnitHierarchy.CycleMessage + id);
+                continue;
             }
             seen.add(id);
             for (const child of children.get(id) ?? [])
@@ -150,7 +147,7 @@ export class BusinessUnitHierarchy
         {
             return true;
         }
-        return this.DescendantsOf(scopeBu).includes(targetBu);
+        return this.AncestorsOf(targetBu).includes(scopeBu);
     }
 
     private AssertKnown(buId: string): void
