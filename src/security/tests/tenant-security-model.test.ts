@@ -70,3 +70,25 @@ test("ownership rule problems fail closed", () =>
 
     assert.throws(() => TenantSecurityModel.FromConfig({ ...Fixture.Valid(), ownershipRules: [{ concept: "", owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" } }] }), MalformedSecurityModelError);
 });
+
+test("an override referencing an unknown BU or team fails closed", () =>
+{
+    assert.throws(() => TenantSecurityModel.FromConfig({ ...Fixture.Valid(), membership: { claimsMapping: [], overrides: [{ principalId: "u1", homeBusinessUnit: "ghost" }] } }), MalformedSecurityModelError);
+    assert.throws(() => TenantSecurityModel.FromConfig({ ...Fixture.Valid(), membership: { claimsMapping: [], overrides: [{ principalId: "u1", teams: ["ghost"] }] } }), MalformedSecurityModelError);
+});
+
+test("an empty ownership source value fails closed", () =>
+{
+    assert.throws(() => TenantSecurityModel.FromConfig({ ...Fixture.Valid(), ownershipRules: [{ concept: "shop.Order", owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "" } }] }), MalformedSecurityModelError);
+});
+
+test("an owner source with a bogus kind fails closed", () =>
+{
+    assert.throws(() => TenantSecurityModel.FromConfig({ ...Fixture.Valid(), ownershipRules: [{ concept: "shop.Order", owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" }, owner: { kind: "bogus" as OwnershipSourceKind, value: "x" } }] }), MalformedSecurityModelError);
+});
+
+test("a Fixed owner value is accepted without hierarchy validation", () =>
+{
+    const model = TenantSecurityModel.FromConfig({ ...Fixture.Valid(), ownershipRules: [{ concept: "shop.Order", owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" }, owner: { kind: OwnershipSourceKind.Fixed, value: "not-a-bu" } }] });
+    assert.equal(model.Ownership().Resolve({ Concept: "shop.Order", Field: () => undefined }).owner, "not-a-bu");
+});
