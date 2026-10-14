@@ -32,7 +32,13 @@ export class OwnershipResolver
         {
             return { owningBusinessUnit: this.hierarchy.RootId() };
         }
-        return { owningBusinessUnit: this.OwningBusinessUnit(rule.owningBusinessUnit, view), owner: this.Owner(rule.owner, view) };
+        const owningBusinessUnit = this.OwningBusinessUnit(rule.owningBusinessUnit, view);
+        const owner = this.Owner(rule.owner, view);
+        if (owner === undefined)
+        {
+            return { owningBusinessUnit };
+        }
+        return { owningBusinessUnit, owner };
     }
 
     private OwningBusinessUnit(source: IOwnershipSource, view: IInstanceView): string

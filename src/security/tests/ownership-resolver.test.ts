@@ -79,3 +79,14 @@ test("field-derived owner is carried through even when unknown; missing owner fi
     assert.equal(resolver.Resolve(Fixture.View("shop.Order", { assignee: "user-7" })).owner, "user-7");
     assert.equal(resolver.Resolve(Fixture.View("shop.Order", {})).owner, undefined);
 });
+
+test("a rule without an owner omits the owner key entirely", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" },
+    };
+    const o = new OwnershipResolver([rule], Fixture.Hierarchy()).Resolve(Fixture.View("shop.Order", {}));
+    assert.deepEqual(o, { owningBusinessUnit: "eng" });
+});
