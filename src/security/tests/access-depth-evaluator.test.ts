@@ -233,3 +233,14 @@ test("BusinessUnit denies a child of a team BU (exact match only)", () =>
     const p = Fixture.Principal([["dept", "eng"], ["r2", "bu"]]); // home eng, team t-field (BU field); bu-reader (BU)
     assert.equal(e.Allows(p, PrivilegeAction.Read, Fixture.View({ owner: "x", bu: "field-west" })), false); // field-west is a child of team BU field; BU level is exact
 });
+
+test("a groups-channel claim rule grants direct roles via HasGroup", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config({
+        roleAssignment: { claimsMapping: [{ claim: "group", value: "admins", roles: ["org-reader"] }], overrides: [], teamRoles: [] },
+    }));
+    const inGroup = new Principal("u9", "t1", PrincipalKind.User, new Map(), ["admins"]);
+    const notInGroup = new Principal("u9", "t1", PrincipalKind.User, new Map(), []);
+    assert.equal(e.EffectiveRoles(inGroup).has("org-reader"), true);
+    assert.equal(e.EffectiveRoles(notInGroup).has("org-reader"), false);
+});
