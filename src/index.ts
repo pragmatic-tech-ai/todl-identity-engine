@@ -13,3 +13,4 @@ export type { IMembership } from "./security/membership-resolver.js";
 export { OwnershipResolver } from "./security/ownership-resolver.js";
 export type { IOwnership } from "./security/ownership-resolver.js";
 export { TenantSecurityModel, MalformedSecurityModelError } from "./security/tenant-security-model.js";
+export { AccessDepthEvaluator, MalformedRolesError } from "./security/access-depth-evaluator.js";
