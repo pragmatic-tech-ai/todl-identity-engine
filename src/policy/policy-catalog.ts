@@ -57,6 +57,16 @@ export class PolicyCatalog
         return new PolicyCatalog(byConcept);
     }
 
+    public static FromPolicies(rules: Iterable<{ concept: string; rulesJson: string }>): PolicyCatalog
+    {
+        const byConcept = new Map<string, readonly PolicyRule[]>();
+        for (const rule of rules)
+        {
+            byConcept.set(rule.concept, PolicyCatalog.ParseRules(rule.rulesJson, rule.concept));
+        }
+        return new PolicyCatalog(byConcept);
+    }
+
     public RulesFor(concept: string): readonly PolicyRule[]
     {
         return this.rulesByConcept.get(concept) ?? [];

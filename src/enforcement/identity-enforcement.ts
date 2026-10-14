@@ -22,6 +22,11 @@ export class IdentityEnforcement
         this.policy = new FusionAccessPolicy(catalog);
     }
 
+    public static Over(catalog: PolicyCatalog, context: AccessContext, action: Action): IdentityEnforcement
+    {
+        return new IdentityEnforcement(catalog, context, action);
+    }
+
     public static ForRepository(repo: Repository, context: AccessContext, action: Action): IdentityEnforcement
     {
         return new IdentityEnforcement(PolicyCatalog.FromRepository(repo), context, action);
