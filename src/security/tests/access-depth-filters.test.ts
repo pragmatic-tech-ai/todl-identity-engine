@@ -11,22 +11,26 @@ import { AllowAllInstanceFilter } from "../allow-all-instance-filter.js";
 class DepthFilterFixture
 {
     public static readonly Concept = "Widget";
+    public static readonly PrincipalId = "p1";
+    public static readonly TenantId = "t1";
+    public static readonly RootBusinessUnitId = "root";
+    public static readonly ReaderRoleId = "reader";
 
     public static AllowingModel(): ISecurityModelConfig
     {
         return {
-            businessUnits: [{ id: "root", name: "Root" }],
+            businessUnits: [{ id: DepthFilterFixture.RootBusinessUnitId, name: "Root" }],
             teams: [],
-            membership: { claimsMapping: [], overrides: [{ principalId: "p1", homeBusinessUnit: "root", teams: [] }] },
-            ownershipRules: [{ concept: DepthFilterFixture.Concept, owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "root" } }],
-            roles: [{ id: "reader", name: "Reader", privileges: [{ action: PrivilegeAction.Read, concept: DepthFilterFixture.Concept, level: AccessLevel.Organization }] }],
-            roleAssignment: { claimsMapping: [], overrides: [{ principalId: "p1", roles: ["reader"] }], teamRoles: [] },
+            membership: { claimsMapping: [], overrides: [{ principalId: DepthFilterFixture.PrincipalId, homeBusinessUnit: DepthFilterFixture.RootBusinessUnitId, teams: [] }] },
+            ownershipRules: [{ concept: DepthFilterFixture.Concept, owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: DepthFilterFixture.RootBusinessUnitId } }],
+            roles: [{ id: DepthFilterFixture.ReaderRoleId, name: "Reader", privileges: [{ action: PrivilegeAction.Read, concept: DepthFilterFixture.Concept, level: AccessLevel.Organization }] }],
+            roleAssignment: { claimsMapping: [], overrides: [{ principalId: DepthFilterFixture.PrincipalId, roles: [DepthFilterFixture.ReaderRoleId] }], teamRoles: [] },
         };
     }
 
     public static Principal(): Principal
     {
-        return new Principal("p1", "t1", PrincipalKind.User, new Map(), []);
+        return new Principal(DepthFilterFixture.PrincipalId, DepthFilterFixture.TenantId, PrincipalKind.User, new Map(), []);
     }
 
     public static View(): IInstanceView
@@ -51,12 +55,23 @@ test("AccessDepthInstanceFilter.Keep equals evaluator.Allows for the fixed actio
     assert.equal(deny.Keep(DepthFilterFixture.View()), false);
 });
 
-test("CompositeInstanceFilter is deny-wins and keeps on empty", () =>
+test("AccessDepthInstanceFilter uses its constructor action, not a default", () =>
+{
+    const evaluator = AccessDepthEvaluator.FromConfig(DepthFilterFixture.AllowingModel());
+    const update = new AccessDepthInstanceFilter(evaluator, DepthFilterFixture.Principal(), PrivilegeAction.Update);
+    assert.equal(update.Keep(DepthFilterFixture.View()), false);
+    const read = new AccessDepthInstanceFilter(evaluator, DepthFilterFixture.Principal(), PrivilegeAction.Read);
+    assert.equal(read.Keep(DepthFilterFixture.View()), true);
+});
+
+test("CompositeInstanceFilter is deny-wins regardless of order, and keeps on empty", () =>
 {
     const keep = new AllowAllInstanceFilter();
     const drop = new AccessDepthInstanceFilter(AccessDepthEvaluator.DenyAll(), DepthFilterFixture.Principal(), PrivilegeAction.Read);
     assert.equal(new CompositeInstanceFilter([keep, keep]).Keep(DepthFilterFixture.View()), true);
     assert.equal(new CompositeInstanceFilter([keep, drop]).Keep(DepthFilterFixture.View()), false);
+    assert.equal(new CompositeInstanceFilter([drop, keep]).Keep(DepthFilterFixture.View()), false);
+    assert.equal(new CompositeInstanceFilter([drop]).Keep(DepthFilterFixture.View()), false);
     assert.equal(new CompositeInstanceFilter([]).Keep(DepthFilterFixture.View()), true);
 });
 
