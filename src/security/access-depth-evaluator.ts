@@ -58,6 +58,15 @@ export class AccessDepthEvaluator
         return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit);
     }
 
+    public static DenyAll(): AccessDepthEvaluator
+    {
+        return new AccessDepthEvaluator(
+            TenantSecurityModel.Empty(),
+            new Map<string, IRoleConfig>(),
+            { claimsMapping: [], overrides: [], teamRoles: [] },
+            new Map<string, string>());
+    }
+
     public EffectiveRoles(principal: Principal): ReadonlySet<string>
     {
         const roles = new Set<string>(this.DirectRoles(principal));

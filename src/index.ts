@@ -14,3 +14,6 @@ export { OwnershipResolver } from "./security/ownership-resolver.js";
 export type { IOwnership } from "./security/ownership-resolver.js";
 export { TenantSecurityModel, MalformedSecurityModelError } from "./security/tenant-security-model.js";
 export { AccessDepthEvaluator, MalformedRolesError } from "./security/access-depth-evaluator.js";
+export { AccessDepthInstanceFilter } from "./security/access-depth-instance-filter.js";
+export { CompositeInstanceFilter } from "./security/composite-instance-filter.js";
+export { AllowAllInstanceFilter } from "./security/allow-all-instance-filter.js";
