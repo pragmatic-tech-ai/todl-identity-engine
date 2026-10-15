@@ -126,3 +126,27 @@ test("CreateFieldDefaults: field BU only when owner is absent", () =>
     const out = new OwnershipResolver([rule], Fixture.Hierarchy()).CreateFieldDefaults("shop.Order", "u1", "sales");
     assert.deepEqual(out, [{ field: "bu", value: "sales" }]);
 });
+
+test("CreateFieldDefaults: FromField owner with Fixed BU stamps only the owner", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" },
+        owner: { kind: OwnershipSourceKind.FromField, value: "owner" },
+    };
+    const out = new OwnershipResolver([rule], Fixture.Hierarchy()).CreateFieldDefaults("shop.Order", "u1", "sales");
+    assert.deepEqual(out, [{ field: "owner", value: "u1" }]);
+});
+
+test("CreateFieldDefaults: Fixed owner with FromField BU stamps only the BU", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.FromField, value: "bu" },
+        owner: { kind: OwnershipSourceKind.Fixed, value: "team-eng" },
+    };
+    const out = new OwnershipResolver([rule], Fixture.Hierarchy()).CreateFieldDefaults("shop.Order", "u1", "sales");
+    assert.deepEqual(out, [{ field: "bu", value: "sales" }]);
+});
