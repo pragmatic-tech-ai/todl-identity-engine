@@ -3,6 +3,7 @@ import type { ISecurityModelConfig, IOwnershipRuleConfig, IOwnershipSource, ITea
 import { BusinessUnitHierarchy } from "./business-unit-hierarchy.js";
 import { MembershipResolver } from "./membership-resolver.js";
 import { OwnershipResolver } from "./ownership-resolver.js";
+import { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 
 export class MalformedSecurityModelError extends Error
 {
@@ -31,7 +32,8 @@ export class TenantSecurityModel
     private constructor(
         private readonly hierarchy: BusinessUnitHierarchy,
         private readonly membership: MembershipResolver,
-        private readonly ownership: OwnershipResolver)
+        private readonly ownership: OwnershipResolver,
+        private readonly fieldSecurity: FieldSecurityEvaluator)
     {
     }
 
@@ -41,10 +43,11 @@ export class TenantSecurityModel
         const teamIds = TenantSecurityModel.ValidateTeams(config.teams, hierarchy);
         TenantSecurityModel.ValidateMembership(config.membership, hierarchy, teamIds);
         TenantSecurityModel.ValidateOwnership(config.ownershipRules, hierarchy);
-        return new TenantSecurityModel(
-            hierarchy,
-            new MembershipResolver(config.membership, hierarchy),
-            new OwnershipResolver(config.ownershipRules, hierarchy));
+        const membership = new MembershipResolver(config.membership, hierarchy);
+        const fieldSecurity = config.fieldSecurity === undefined
+            ? FieldSecurityEvaluator.Open()
+            : FieldSecurityEvaluator.FromConfig(config.fieldSecurity, membership);
+        return new TenantSecurityModel(hierarchy, membership, new OwnershipResolver(config.ownershipRules, hierarchy), fieldSecurity);
     }
 
     public static Empty(): TenantSecurityModel
@@ -53,7 +56,7 @@ export class TenantSecurityModel
             { id: TenantSecurityModel.DefaultRootBusinessUnitId, name: TenantSecurityModel.DefaultRootName },
         ]);
         const membership: IMembershipConfig = { claimsMapping: [], overrides: [] };
-        return new TenantSecurityModel(hierarchy, new MembershipResolver(membership, hierarchy), new OwnershipResolver([], hierarchy));
+        return new TenantSecurityModel(hierarchy, new MembershipResolver(membership, hierarchy), new OwnershipResolver([], hierarchy), FieldSecurityEvaluator.Open());
     }
 
     public Hierarchy(): BusinessUnitHierarchy
@@ -69,6 +72,11 @@ export class TenantSecurityModel
     public Ownership(): OwnershipResolver
     {
         return this.ownership;
+    }
+
+    public FieldSecurity(): FieldSecurityEvaluator
+    {
+        return this.fieldSecurity;
     }
 
     private static ValidateTeams(teams: readonly ITeamConfig[], hierarchy: BusinessUnitHierarchy): ReadonlySet<string>

@@ -2,6 +2,7 @@ import type { IInstanceView } from "@pragmatic-tech-ai/todl";
 import { PrivilegeAction, AccessLevel } from "@pragmatic-tech-ai/todl-identity";
 import type { ISecurityModelConfig, IRoleConfig, IPrivilegeConfig, IRoleAssignmentConfig, ITeamConfig, Principal } from "@pragmatic-tech-ai/todl-identity";
 import { TenantSecurityModel } from "./tenant-security-model.js";
+import type { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 
 export class MalformedRolesError extends Error
 {
@@ -149,6 +150,11 @@ export class AccessDepthEvaluator
     {
         const home = this.model.Membership().Resolve(principal).homeBusinessUnit;
         return this.model.Ownership().CreateFieldDefaults(concept, principal.Id, home);
+    }
+
+    public FieldSecurity(): FieldSecurityEvaluator
+    {
+        return this.model.FieldSecurity();
     }
 
     private DirectRoles(principal: Principal): readonly string[]
