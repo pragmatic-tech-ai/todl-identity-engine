@@ -90,3 +90,39 @@ test("a rule without an owner omits the owner key entirely", () =>
     const o = new OwnershipResolver([rule], Fixture.Hierarchy()).Resolve(Fixture.View("shop.Order", {}));
     assert.deepEqual(o, { owningBusinessUnit: "eng" });
 });
+
+test("CreateFieldDefaults: field-backed owner and BU both stamp", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.FromField, value: "bu" },
+        owner: { kind: OwnershipSourceKind.FromField, value: "owner" },
+    };
+    const out = new OwnershipResolver([rule], Fixture.Hierarchy()).CreateFieldDefaults("shop.Order", "u1", "sales");
+    assert.deepEqual(out, [{ field: "owner", value: "u1" }, { field: "bu", value: "sales" }]);
+});
+
+test("CreateFieldDefaults: Fixed sources contribute nothing; no rule yields empty", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.Fixed, value: "eng" },
+        owner: { kind: OwnershipSourceKind.Fixed, value: "team-eng" },
+    };
+    const resolver = new OwnershipResolver([rule], Fixture.Hierarchy());
+    assert.deepEqual(resolver.CreateFieldDefaults("shop.Order", "u1", "sales"), []);
+    assert.deepEqual(resolver.CreateFieldDefaults("shop.Unknown", "u1", "sales"), []);
+});
+
+test("CreateFieldDefaults: field BU only when owner is absent", () =>
+{
+    const rule: IOwnershipRuleConfig =
+    {
+        concept: "shop.Order",
+        owningBusinessUnit: { kind: OwnershipSourceKind.FromField, value: "bu" },
+    };
+    const out = new OwnershipResolver([rule], Fixture.Hierarchy()).CreateFieldDefaults("shop.Order", "u1", "sales");
+    assert.deepEqual(out, [{ field: "bu", value: "sales" }]);
+});

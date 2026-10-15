@@ -244,3 +244,24 @@ test("a groups-channel claim rule grants direct roles via HasGroup", () =>
     assert.equal(e.EffectiveRoles(inGroup).has("org-reader"), true);
     assert.equal(e.EffectiveRoles(notInGroup).has("org-reader"), false);
 });
+
+test("CreateDefaults stamps principal id as owner and home BU as owning BU", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config());
+    const out = e.CreateDefaults(Fixture.Principal([["dept", "eng"]]), Order);
+    assert.deepEqual(out, [{ field: "owner", value: "u1" }, { field: "bu", value: "eng" }]);
+});
+
+test("CreateDefaults returns empty for a concept with no ownership rule", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config());
+    assert.deepEqual(e.CreateDefaults(Fixture.Principal([["dept", "eng"]]), "shop.Other"), []);
+});
+
+test("CreateDefaults falls back to root BU when the principal has no home mapping", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(Fixture.Config());
+    // No "dept" claim ⇒ membership home falls back to hierarchy root.
+    const out = e.CreateDefaults(Fixture.Principal([]), Order);
+    assert.deepEqual(out, [{ field: "owner", value: "u1" }, { field: "bu", value: "root" }]);
+});

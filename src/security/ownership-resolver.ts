@@ -41,6 +41,25 @@ export class OwnershipResolver
         return { owningBusinessUnit, owner };
     }
 
+    public CreateFieldDefaults(concept: string, owner: string, owningBusinessUnit: string): readonly { field: string; value: string }[]
+    {
+        const rule = this.rulesByConcept.get(concept);
+        if (rule === undefined)
+        {
+            return [];
+        }
+        const defaults: { field: string; value: string }[] = [];
+        if (rule.owner !== undefined && rule.owner.kind === OwnershipSourceKind.FromField)
+        {
+            defaults.push({ field: rule.owner.value, value: owner });
+        }
+        if (rule.owningBusinessUnit.kind === OwnershipSourceKind.FromField)
+        {
+            defaults.push({ field: rule.owningBusinessUnit.value, value: owningBusinessUnit });
+        }
+        return defaults;
+    }
+
     private OwningBusinessUnit(source: IOwnershipSource, view: IInstanceView): string
     {
         if (source.kind === OwnershipSourceKind.Fixed)

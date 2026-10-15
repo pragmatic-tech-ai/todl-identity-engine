@@ -145,6 +145,12 @@ export class AccessDepthEvaluator
         return false;
     }
 
+    public CreateDefaults(principal: Principal, concept: string): readonly { field: string; value: string }[]
+    {
+        const home = this.model.Membership().Resolve(principal).homeBusinessUnit;
+        return this.model.Ownership().CreateFieldDefaults(concept, principal.Id, home);
+    }
+
     private DirectRoles(principal: Principal): readonly string[]
     {
         for (const override of this.assignment.overrides)
