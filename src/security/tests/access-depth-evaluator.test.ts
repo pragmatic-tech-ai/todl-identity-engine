@@ -265,3 +265,36 @@ test("CreateDefaults falls back to root BU when the principal has no home mappin
     const out = e.CreateDefaults(Fixture.Principal([]), Order);
     assert.deepEqual(out, [{ field: "owner", value: "u1" }, { field: "bu", value: "root" }]);
 });
+
+class ShareFx
+{
+    public static Config(): ISecurityModelConfig
+    {
+        return {
+            businessUnits: [{ id: "root", name: "Root" }],
+            teams: [{ id: "sales", name: "Sales" }],
+            membership: { claimsMapping: [], overrides: [{ principalId: "u1", homeBusinessUnit: "root", teams: ["sales"] }] },
+            ownershipRules: [],
+        };
+    }
+
+    public static Principal(id: string): Principal
+    {
+        return new Principal(id, "t1", PrincipalKind.User, new Map(), []);
+    }
+}
+
+test("MembershipOf returns the principal's resolved teams; IsKnownTeam reflects config.teams", () =>
+{
+    const e = AccessDepthEvaluator.FromConfig(ShareFx.Config());
+    assert.deepEqual([...e.MembershipOf(ShareFx.Principal("u1")).teams], ["sales"]);
+    assert.equal(e.IsKnownTeam("sales"), true);
+    assert.equal(e.IsKnownTeam("ghost"), false);
+});
+
+test("DenyAll knows no teams and resolves empty membership", () =>
+{
+    const e = AccessDepthEvaluator.DenyAll();
+    assert.equal(e.IsKnownTeam("sales"), false);
+    assert.deepEqual([...e.MembershipOf(ShareFx.Principal("x")).teams], []);
+});

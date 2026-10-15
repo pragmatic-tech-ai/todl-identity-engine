@@ -3,6 +3,7 @@ import { PrivilegeAction, AccessLevel } from "@pragmatic-tech-ai/todl-identity";
 import type { ISecurityModelConfig, IRoleConfig, IPrivilegeConfig, IRoleAssignmentConfig, ITeamConfig, Principal } from "@pragmatic-tech-ai/todl-identity";
 import { TenantSecurityModel } from "./tenant-security-model.js";
 import type { FieldSecurityEvaluator } from "./field-security-evaluator.js";
+import type { IMembership } from "./membership-resolver.js";
 
 export class MalformedRolesError extends Error
 {
@@ -37,7 +38,8 @@ export class AccessDepthEvaluator
         private readonly model: TenantSecurityModel,
         private readonly rolesById: ReadonlyMap<string, IRoleConfig>,
         private readonly assignment: IRoleAssignmentConfig,
-        private readonly teamOwningBusinessUnit: ReadonlyMap<string, string>)
+        private readonly teamOwningBusinessUnit: ReadonlyMap<string, string>,
+        private readonly knownTeams: ReadonlySet<string>)
     {
     }
 
@@ -49,14 +51,16 @@ export class AccessDepthEvaluator
         const rolesById = AccessDepthEvaluator.IndexRoles(roles);
         AccessDepthEvaluator.ValidateAssignment(assignment, rolesById, config.teams);
         const teamOwningBusinessUnit = new Map<string, string>();
+        const knownTeams = new Set<string>();
         for (const team of config.teams)
         {
+            knownTeams.add(team.id);
             if (team.owningBusinessUnit !== undefined)
             {
                 teamOwningBusinessUnit.set(team.id, team.owningBusinessUnit);
             }
         }
-        return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit);
+        return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit, knownTeams);
     }
 
     public static DenyAll(): AccessDepthEvaluator
@@ -65,7 +69,8 @@ export class AccessDepthEvaluator
             TenantSecurityModel.Empty(),
             new Map<string, IRoleConfig>(),
             { claimsMapping: [], overrides: [], teamRoles: [] },
-            new Map<string, string>());
+            new Map<string, string>(),
+            new Set<string>());
     }
 
     public EffectiveRoles(principal: Principal): ReadonlySet<string>
@@ -155,6 +160,16 @@ export class AccessDepthEvaluator
     public FieldSecurity(): FieldSecurityEvaluator
     {
         return this.model.FieldSecurity();
+    }
+
+    public MembershipOf(principal: Principal): IMembership
+    {
+        return this.model.Membership().Resolve(principal);
+    }
+
+    public IsKnownTeam(teamId: string): boolean
+    {
+        return this.knownTeams.has(teamId);
     }
 
     private DirectRoles(principal: Principal): readonly string[]
