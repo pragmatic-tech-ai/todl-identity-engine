@@ -67,6 +67,11 @@ export class FieldSecurityEvaluator
         return new FieldSecurityEvaluator(secured, profilesById, config.profileAssignment, membership);
     }
 
+    public HasSecuredFields(): boolean
+    {
+        return this.secured.size > 0;
+    }
+
     public IsSecured(concept: string, field: string): boolean
     {
         return this.secured.has(FieldSecurityEvaluator.Key(concept, field));
