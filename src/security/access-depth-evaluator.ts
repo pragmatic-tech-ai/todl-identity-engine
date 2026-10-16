@@ -14,6 +14,21 @@ export class MalformedRolesError extends Error
     }
 }
 
+export enum AssignOutcome
+{
+    Writes = "writes",
+    Unsupported = "unsupported",
+    UnknownTeam = "unknownTeam",
+    UnknownBusinessUnit = "unknownBusinessUnit",
+    OwningBusinessUnitRequired = "owningBusinessUnitRequired",
+}
+
+export interface IAssignComputation
+{
+    readonly outcome: AssignOutcome;
+    readonly writes: readonly { field: string; value: string }[];
+}
+
 export class AccessDepthEvaluator
 {
     private static readonly GroupsChannel = "group";
@@ -170,6 +185,41 @@ export class AccessDepthEvaluator
     public IsKnownTeam(teamId: string): boolean
     {
         return this.knownTeams.has(teamId);
+    }
+
+    public AssignWrites(concept: string, ownerId: string, ownerIsTeam: boolean, owningBu: string | undefined): IAssignComputation
+    {
+        const ownership = this.model.Ownership();
+        if (ownership.OwnerField(concept) === undefined)
+        {
+            return { outcome: AssignOutcome.Unsupported, writes: [] };
+        }
+        if (ownerIsTeam && !this.IsKnownTeam(ownerId))
+        {
+            return { outcome: AssignOutcome.UnknownTeam, writes: [] };
+        }
+        let bu: string | undefined;
+        if (owningBu !== undefined)
+        {
+            if (!this.model.Hierarchy().Has(owningBu))
+            {
+                return { outcome: AssignOutcome.UnknownBusinessUnit, writes: [] };
+            }
+            bu = owningBu;
+        }
+        else if (ownerIsTeam)
+        {
+            bu = this.teamOwningBusinessUnit.get(ownerId);
+        }
+        else
+        {
+            bu = undefined;
+        }
+        if (ownership.BusinessUnitField(concept) !== undefined && bu === undefined)
+        {
+            return { outcome: AssignOutcome.OwningBusinessUnitRequired, writes: [] };
+        }
+        return { outcome: AssignOutcome.Writes, writes: ownership.CreateFieldDefaults(concept, ownerId, bu ?? "") };
     }
 
     private DirectRoles(principal: Principal): readonly string[]

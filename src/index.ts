@@ -15,6 +15,8 @@ export type { IOwnership } from "./security/ownership-resolver.js";
 export { TenantSecurityModel, MalformedSecurityModelError } from "./security/tenant-security-model.js";
 export { FieldSecurityEvaluator, MalformedFieldSecurityError } from "./security/field-security-evaluator.js";
 export { AccessDepthEvaluator, MalformedRolesError } from "./security/access-depth-evaluator.js";
+export { AssignOutcome } from "./security/access-depth-evaluator.js";
+export type { IAssignComputation } from "./security/access-depth-evaluator.js";
 export { AccessDepthInstanceFilter } from "./security/access-depth-instance-filter.js";
 export { CompositeInstanceFilter } from "./security/composite-instance-filter.js";
 export { AllowAllInstanceFilter } from "./security/allow-all-instance-filter.js";

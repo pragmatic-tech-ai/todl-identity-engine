@@ -41,6 +41,26 @@ export class OwnershipResolver
         return { owningBusinessUnit, owner };
     }
 
+    public OwnerField(concept: string): string | undefined
+    {
+        const rule = this.rulesByConcept.get(concept);
+        if (rule === undefined || rule.owner === undefined || rule.owner.kind !== OwnershipSourceKind.FromField)
+        {
+            return undefined;
+        }
+        return rule.owner.value;
+    }
+
+    public BusinessUnitField(concept: string): string | undefined
+    {
+        const rule = this.rulesByConcept.get(concept);
+        if (rule === undefined || rule.owningBusinessUnit.kind !== OwnershipSourceKind.FromField)
+        {
+            return undefined;
+        }
+        return rule.owningBusinessUnit.value;
+    }
+
     public CreateFieldDefaults(concept: string, owner: string, owningBusinessUnit: string): readonly { field: string; value: string }[]
     {
         const rule = this.rulesByConcept.get(concept);
