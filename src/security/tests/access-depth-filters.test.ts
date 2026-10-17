@@ -77,5 +77,5 @@ test("CompositeInstanceFilter is deny-wins regardless of order, and keeps on emp
 
 test("AllowAllInstanceFilter keeps everything", () =>
 {
-    assert.equal(new AllowAllInstanceFilter().Keep(DepthFilterFixture.View()), true);
+    assert.equal(new AllowAllInstanceFilter().Keep(), true);
 });

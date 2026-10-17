@@ -37,6 +37,11 @@ export class RecordingAdapter implements IDataSourceAdapter
     {
         return { Applied: 0, Conflicts: [] };
     }
+
+    public async Dispose(): Promise<void>
+    {
+        // In-memory test adapter: no driver connection or pool to release.
+    }
 }
 
 export class RecordingAdapterFactory implements IDataSourceAdapterFactory

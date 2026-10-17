@@ -105,7 +105,7 @@ class ConnectorHarness
     {
         const source = new EnforcementSource(doc);
         source.UseInstanceFilter(this.Enforcement.InstanceFilter());
-        return source.Instances(ConnectorHarness.Concept).map((e) => e.id.split(ConnectorHarness.IdSeparator).at(-1)).sort();
+        return source.Instances(ConnectorHarness.Concept).map((e) => e.id.split(ConnectorHarness.IdSeparator).at(-1) ?? e.id).sort();
     }
 }
 

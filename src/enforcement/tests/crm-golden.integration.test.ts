@@ -147,7 +147,7 @@ class CrmHarness
     {
         const src = new CrmSource(doc);
         src.UseInstanceFilter(this.Enforcement.InstanceFilter());
-        return src.Instances(concept).map((e) => e.id.split(CrmHarness.IdSeparator).at(-1)).sort();
+        return src.Instances(concept).map((e) => e.id.split(CrmHarness.IdSeparator).at(-1) ?? e.id).sort();
     }
 }
 
