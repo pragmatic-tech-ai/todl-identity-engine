@@ -54,7 +54,8 @@ export class AccessDepthEvaluator
         private readonly rolesById: ReadonlyMap<string, IRoleConfig>,
         private readonly assignment: IRoleAssignmentConfig,
         private readonly teamOwningBusinessUnit: ReadonlyMap<string, string>,
-        private readonly knownTeams: ReadonlySet<string>)
+        private readonly knownTeams: ReadonlySet<string>,
+        private readonly governedConcepts: ReadonlySet<string>)
     {
     }
 
@@ -75,7 +76,19 @@ export class AccessDepthEvaluator
                 teamOwningBusinessUnit.set(team.id, team.owningBusinessUnit);
             }
         }
-        return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit, knownTeams);
+        const governed = new Set<string>();
+        for (const role of roles)
+        {
+            for (const privilege of role.privileges)
+            {
+                governed.add(privilege.concept);
+            }
+        }
+        for (const rule of config.ownershipRules ?? [])
+        {
+            governed.add(rule.concept);
+        }
+        return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit, knownTeams, governed);
     }
 
     public static DenyAll(): AccessDepthEvaluator
@@ -85,7 +98,13 @@ export class AccessDepthEvaluator
             new Map<string, IRoleConfig>(),
             { claimsMapping: [], overrides: [], teamRoles: [] },
             new Map<string, string>(),
+            new Set<string>(),
             new Set<string>());
+    }
+
+    public GovernedConcepts(): ReadonlySet<string>
+    {
+        return this.governedConcepts;
     }
 
     public EffectiveRoles(principal: Principal): ReadonlySet<string>

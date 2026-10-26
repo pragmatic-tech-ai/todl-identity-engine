@@ -18,5 +18,6 @@ export { AccessDepthEvaluator, MalformedRolesError } from "./security/access-dep
 export { AssignOutcome } from "./security/access-depth-evaluator.js";
 export type { IAssignComputation } from "./security/access-depth-evaluator.js";
 export { AccessDepthInstanceFilter } from "./security/access-depth-instance-filter.js";
+export { ConceptBypassInstanceFilter } from "./security/concept-bypass-instance-filter.js";
 export { CompositeInstanceFilter } from "./security/composite-instance-filter.js";
 export { AllowAllInstanceFilter } from "./security/allow-all-instance-filter.js";
