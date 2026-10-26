@@ -21,7 +21,7 @@ class Fixture
             roles: [
                 { id: "a", name: "A", privileges: [
                     { action: PrivilegeAction.Read, concept: Fixture.Order, level: AccessLevel.User },
-                    { action: PrivilegeAction.Write, concept: Fixture.Invoice, level: AccessLevel.User }] },
+                    { action: PrivilegeAction.Update, concept: Fixture.Invoice, level: AccessLevel.User }] },
                 { id: "b", name: "B", privileges: [{ action: PrivilegeAction.Read, concept: Fixture.Order, level: AccessLevel.Organization }] },
             ],
         } as ISecurityModelConfig;
