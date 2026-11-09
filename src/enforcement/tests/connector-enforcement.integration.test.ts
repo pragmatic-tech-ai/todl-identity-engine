@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { FederatedModelDataConnector, DataSourceKind, DataSourceAdapterCatalog, QueryCompareOp, ModelDataSource, check, toJSON } from "@pragmatic-tech-ai/todl";
+import { FederatedModelDataConnector, DataSourceKind, DataSourceAdapterCatalog, QueryCompareOp, ModelDataSource, WriteAtomicity, WriteConcurrency, check, toJSON } from "@pragmatic-tech-ai/todl";
 import type { ModelConnectorPlan, TodlDocument } from "@pragmatic-tech-ai/todl";
 import { ServiceProvider } from "@pragmatic-tech-ai/todl-runtime";
 import { Principal, PrincipalKind, Tenant, TenantKind, Action, AccessContext } from "@pragmatic-tech-ai/todl-identity";
@@ -87,7 +87,7 @@ class ConnectorHarness
                 Concept: ConnectorHarness.Concept, Connector: ConnectorHarness.Connector, Source: ConnectorHarness.Source,
                 IdKey: ConnectorHarness.CustomerId,
                 FieldMap: { customer_id: ConnectorHarness.CustomerId, region: ConnectorHarness.Region, tier: ConnectorHarness.Tier },
-                Writable: false
+                Writable: false, Concurrency: WriteConcurrency.LastWriteWins, Atomicity: WriteAtomicity.Sequential
             }]
         };
     }

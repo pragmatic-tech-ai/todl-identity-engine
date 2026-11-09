@@ -35,7 +35,7 @@ export class RecordingAdapter implements IDataSourceAdapter
 
     public async Apply(_batch: WriteBatch): Promise<WriteResult>
     {
-        return { Applied: 0, Conflicts: [] };
+        return { Applied: 0, Failures: [] };
     }
 
     public async Dispose(): Promise<void>
