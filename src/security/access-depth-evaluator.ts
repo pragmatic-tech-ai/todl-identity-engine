@@ -196,6 +196,19 @@ export class AccessDepthEvaluator
         return this.model.FieldSecurity();
     }
 
+    /** The tenant security model the evaluator decides with (hierarchy, membership, ownership rules, field security). */
+    public Model(): TenantSecurityModel
+    {
+        return this.model;
+    }
+
+    /** The business units a principal reaches: its home unit plus the owning unit of each of its teams. */
+    public ReachOf(principal: Principal): ReadonlySet<string>
+    {
+        const membership = this.model.Membership().Resolve(principal);
+        return this.ReachBusinessUnits(membership.homeBusinessUnit, membership.teams);
+    }
+
     public MembershipOf(principal: Principal): IMembership
     {
         return this.model.Membership().Resolve(principal);
