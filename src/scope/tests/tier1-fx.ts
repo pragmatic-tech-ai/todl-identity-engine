@@ -18,7 +18,7 @@ export interface ITier1FxOptions
 /**
  * The tier-1 environment: system aspect Owned, todl.Element, todl.Term, ShareGrant; `hr.Employee` (owned; Name, secured
  * Salary and NationalId) and its subconcept `contractors.Contractor` (another package, no contributions); `projects`
- * Project and Task (owned) and the edge concept Assignment (from → Employee, to → Project); `sales.Account`, bound to the
+ * Project and Task (owned) and the edge concept Assignment (from → Employee, to → Project; secured Rate); `sales.Account`, bound to the
  * `crm` connector. BUs contoso → sales, marketing; teams mkt (marketing; erin) and staff (sales; dana).
  */
 export class Tier1Fx
@@ -39,6 +39,8 @@ export class Tier1Fx
     public static readonly To = "to";
     public static readonly Crm = "crm";
     public static readonly SalaryReader = "hr.SalaryReader";
+    public static readonly RateReader = "projects.RateReader";
+    public static readonly Rate = "Rate";
     public static readonly ProjectMember = "projects.ProjectMember";
     public static readonly ProjectManager = "projects.ProjectManager";
     public static readonly Contoso = "contoso";
@@ -95,7 +97,7 @@ export class Tier1Fx
             fx.Concept(fx.Contractor, fx.Employee, [], []),
             fx.Concept(fx.Project, TodlNames.Element, owned, [fx.Text(fx.Name)]),
             fx.Concept(fx.Task, TodlNames.Element, owned, [fx.Text(fx.Name), fx.Rel(fx.ProjectOf, fx.Project)]),
-            fx.Concept(fx.Assignment, TodlNames.Element, [], [fx.Rel(fx.From, fx.Employee), fx.Rel(fx.To, fx.Project)]),
+            fx.Concept(fx.Assignment, TodlNames.Element, [], [fx.Rel(fx.From, fx.Employee), fx.Rel(fx.To, fx.Project), fx.Text(fx.Rate)]),
             fx.Concept(fx.Account, TodlNames.Element, [], [fx.Text(fx.Name)]),
         ];
         const bindings = bound ? [{ Model: fx.SalesModel, Concept: fx.Account, Connector: fx.Crm }] : [];
@@ -221,7 +223,12 @@ export class Tier1Fx
                 ],
             },
         ];
-        return fx.Package([fx.Project, fx.Task], roles, contributions, [{ Concept: fx.Assignment, From: fx.From, To: fx.To }]);
+        const security = fx.Package([fx.Project, fx.Task], roles, contributions, [{ Concept: fx.Assignment, From: fx.From, To: fx.To }]);
+        return {
+            ...security,
+            SecuredFields: [{ Concept: fx.Assignment, Field: fx.Rate }],
+            FieldProfiles: [{ Name: fx.RateReader, Fields: [{ Concept: fx.Assignment, Field: fx.Rate, Read: true, Update: false, Create: false }] }],
+        };
     }
 
     private static Package(owned: readonly string[], roles: readonly IPackageRole[], contributions: readonly IPackageRole[], edges: readonly IEdgeConcept[]): IPackageSecurity

@@ -1,5 +1,5 @@
 import type { IPackageRole } from "@pragmatic-tech-ai/todl";
-import type { IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
+import { SystemNames, TodlNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
 import { AccessLevel, BaseRole, type IRoleOverrideConfig, type PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
 import { SecurityVocabulary } from "./security-vocabulary.js";
 import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
@@ -21,10 +21,14 @@ export class EffectiveRoleTable
 
     private static readonly BaseRoles: ReadonlySet<string> = new Set<string>(Object.values(BaseRole));
 
+    /** The scope compiler fixes these concepts' rules itself (rule 6), so the table is never read for them. */
+    private static readonly PlatformConcepts: ReadonlySet<string> = new Set<string>([TodlNames.Term, TodlNames.Element, SystemNames.ShareGrant]);
+
     private static readonly KeySeparator = "\u0000";
     private static readonly SubjectSeparator = "/";
     private static readonly UnknownRoleMessage = "role override names a role no deployed package or the platform defines: ";
     private static readonly UnknownConceptMessage = "role override names a concept that is not engine-stored in this environment: ";
+    private static readonly PlatformConceptMessage = "role override names a platform concept whose rules are fixed; dropped: ";
     private static readonly UnownedDepthMessage = "a concept without the ownership aspect takes only none or organization; read as none: ";
 
     private readonly diagnostics: Tier1Diagnostic[] = [];
@@ -114,6 +118,11 @@ export class EffectiveRoleTable
             if (levels === undefined)
             {
                 this.Report(Tier1DiagnosticCode.OverrideUnknownRole, override.role, EffectiveRoleTable.UnknownRoleMessage);
+                continue;
+            }
+            if (EffectiveRoleTable.PlatformConcepts.has(override.concept))
+            {
+                this.Report(Tier1DiagnosticCode.OverridePlatformConcept, override.concept, EffectiveRoleTable.PlatformConceptMessage);
                 continue;
             }
             if (!concepts.has(override.concept))

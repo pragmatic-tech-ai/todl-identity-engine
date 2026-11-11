@@ -125,7 +125,7 @@ export class Tier1Grants
     {
     }
 
-    /** Built by Tier1ScopeCompiler.Grants. */
+    /** @internal Built only by Tier1ScopeCompiler.Grants; Tier1Depth is not part of the package surface. */
     public static For(depth: Tier1Depth): Tier1Grants
     {
         return new Tier1Grants(depth);

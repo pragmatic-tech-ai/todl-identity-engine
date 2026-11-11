@@ -82,10 +82,15 @@ test("secured field stays hidden on a subconcept and depth rules do not leak acr
 
 test("field profile grants read; update absent makes it read-only", () =>
 {
-    const profiles = [{ profile: Tier1Fx.SalaryReader, principalIds: [Tier1Fx.Sam], teamIds: [] }];
+    const profiles = [
+        { profile: Tier1Fx.SalaryReader, principalIds: [Tier1Fx.Sam], teamIds: [] },
+        { profile: Tier1Fx.RateReader, principalIds: [Tier1Fx.Sam], teamIds: [] },
+    ];
     const scope = Fx.Scope(Tier1Fx.Sam, { ProfileAssignments: profiles });
     assert.equal(scope.Hidden.get(Tier1Fx.Employee)?.has(Tier1Fx.Salary), false);
     assert.equal(scope.Writes.get(Tier1Fx.Employee)?.ReadOnly?.Update?.has(Tier1Fx.Salary), true);
+    const rate = new Set<string>([Tier1Fx.Rate]);
+    assert.deepEqual(scope.Writes.get(Tier1Fx.Assignment), { ReadOnly: { Create: rate, Update: rate } });
 });
 
 test("append and appendTo compile from their own depths", () =>

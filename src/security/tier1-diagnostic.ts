@@ -8,6 +8,8 @@ export enum Tier1DiagnosticCode
     OverrideUnknownProfile,
     OverrideUnknownField,
     NonOrganizationDepthOnUnownedConcept,
+    UnplacedPrincipalWithRoles,
+    OverridePlatformConcept,
 }
 
 /** One dropped or reinterpreted entry of the environment setting against the deployed packages. */

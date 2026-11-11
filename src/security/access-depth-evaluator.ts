@@ -39,6 +39,7 @@ export class RoleSource
 export class AccessDepthEvaluator
 {
     private static readonly UnknownAssignedRoleMessage = "role assignment names a role no deployed package or the platform defines: ";
+    private static readonly UnplacedPrincipalMessage = "principal holds direct role assignments but has no business-unit placement; evaluated at the root: ";
 
     private constructor(
         private readonly security: IEnvironmentSecurity,
@@ -69,9 +70,29 @@ export class AccessDepthEvaluator
             }
             assignments.push(assignment);
         }
+        AccessDepthEvaluator.ReportUnplaced(config.users.map(u => u.principalId), assignments, diagnostics);
         const fieldSecurity = FieldSecurityEvaluator.For(security, config.profileAssignments, config.profileOverrides, model.Membership());
         diagnostics.push(...fieldSecurity.Diagnostics());
         return new AccessDepthEvaluator(security, model, table, assignments, fieldSecurity, diagnostics);
+    }
+
+    /** A directly assigned principal without a placement sits at the root, so its BU depths read organisation-wide (C7). */
+    private static ReportUnplaced(placed: readonly string[], assignments: readonly IRoleAssignmentConfig[], diagnostics: Tier1Diagnostic[]): void
+    {
+        const known = new Set<string>(placed);
+        for (const assignment of assignments)
+        {
+            for (const principalId of assignment.principalIds)
+            {
+                if (known.has(principalId))
+                {
+                    continue;
+                }
+                known.add(principalId);
+                const message = AccessDepthEvaluator.UnplacedPrincipalMessage + principalId;
+                diagnostics.push(new Tier1Diagnostic(Tier1DiagnosticCode.UnplacedPrincipalWithRoles, principalId, message));
+            }
+        }
     }
 
     /** No packages, no setting: only the system principal holds anything. */
@@ -184,7 +205,7 @@ export class AccessDepthEvaluator
      * its team's unit, the system principal the root, a placed user its placement; a contradicting `owningBu` is ignored.
      * Only an unplaced user takes the explicit `owningBu`, which must exist; with neither it is OwningBusinessUnitRequired.
      */
-    public AssignWrites(concept: string, ownerId: string, ownerIsTeam: boolean, owningBu: string | undefined): IAssignComputation
+    public AssignWrites(environmentId: string, concept: string, ownerId: string, ownerIsTeam: boolean, owningBu: string | undefined): IAssignComputation
     {
         if (!this.IsOwned(concept))
         {
@@ -195,7 +216,7 @@ export class AccessDepthEvaluator
         {
             return { outcome: AssignOutcome.UnknownTeam, writes: [] };
         }
-        let bu = ownerIsTeam ? teamUnit : this.UserUnitOf(ownerId);
+        let bu = ownerIsTeam ? teamUnit : this.UserUnitOf(ownerId, environmentId);
         if (bu === undefined)
         {
             if (owningBu === undefined)
@@ -230,10 +251,11 @@ export class AccessDepthEvaluator
         return this.diagnostics;
     }
 
-    // An assign names a user by id only: the system principal sits at the root, an unplaced user has no resolvable unit.
-    private UserUnitOf(principalId: string): string | undefined
+    // An assign names a user by id only: the environment's system principal sits at the root, an unplaced user has no
+    // resolvable unit.
+    private UserUnitOf(principalId: string, environmentId: string): string | undefined
     {
-        if (SystemPrincipal.IsId(principalId))
+        if (SystemPrincipal.IsId(principalId, environmentId))
         {
             return this.model.Hierarchy().RootId();
         }

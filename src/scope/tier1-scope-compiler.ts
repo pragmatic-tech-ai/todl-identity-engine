@@ -15,7 +15,8 @@ class CompileContext
         public readonly Evaluator: AccessDepthEvaluator,
         public readonly Depth: Tier1Depth,
         public readonly Subjects: IShareSubjects,
-        public readonly Stored: ReadonlySet<string>)
+        public readonly Stored: ReadonlySet<string>,
+        public readonly Edges: ReadonlySet<string>)
     {
     }
 }
@@ -71,7 +72,7 @@ export class Tier1ScopeCompiler
         }
         const subjects: IShareSubjects = { PrincipalId: principal.Id, Teams: evaluator.MembershipOf(principal).teams };
         const edges = new Set<string>(security.EdgeConcepts.map(e => e.Concept));
-        const context = new CompileContext(principal, evaluator, depth, subjects, stored);
+        const context = new CompileContext(principal, evaluator, depth, subjects, stored, edges);
         const rows = new Map<string, Predicate>();
         const writes = new Map<string, IWriteRules>();
         for (const concept of stored)
@@ -145,7 +146,8 @@ export class Tier1ScopeCompiler
 
     /**
      * Rule 4: an unreadable secured field is hidden on its declaring concept (Hidden inherits to subconcepts); a readable
-     * one without update or create is read-only at that stage.
+     * one without update or create is read-only at that stage. An edge concept has no Writes entry of its own (rule 6), so
+     * its read-only fields get a ReadOnly-only entry: no predicates, so its endpoints' Append / AppendTo still gate it (R23).
      */
     private static FieldSecurity(context: CompileContext, writes: Map<string, IWriteRules>): ReadonlyMap<string, ReadonlySet<string>>
     {
@@ -175,10 +177,18 @@ export class Tier1ScopeCompiler
         }
         for (const [concept, stages] of readOnly)
         {
+            if (stages.Create.size === 0 && stages.Update.size === 0)
+            {
+                continue;
+            }
             const rules = writes.get(concept);
-            if (rules !== undefined && (stages.Create.size > 0 || stages.Update.size > 0))
+            if (rules !== undefined)
             {
                 writes.set(concept, { ...rules, ReadOnly: stages });
+            }
+            else if (context.Edges.has(concept))
+            {
+                writes.set(concept, { ReadOnly: stages });
             }
         }
         return hidden;

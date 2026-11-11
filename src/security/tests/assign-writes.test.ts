@@ -7,11 +7,11 @@ test("assign computes the fixed system fields", () =>
 {
     const model = TenantSecurityModel.FromConfig(EngineSecurityFx.Config(), EngineSecurityFx.Directory());
     const evaluator = AccessDepthEvaluator.For(EngineSecurityFx.Security(), model, EngineSecurityFx.StoredConcepts());
-    assert.deepEqual(evaluator.AssignWrites(EngineSecurityFx.Employee, "hr", true, undefined), {
+    assert.deepEqual(evaluator.AssignWrites(EngineSecurityFx.Tenant, EngineSecurityFx.Employee, "hr", true, undefined), {
         outcome: AssignOutcome.Writes,
         writes: [{ field: "owner", value: "hr" }, { field: "owningBusinessUnit", value: "hr" }],
     });
-    assert.deepEqual(evaluator.AssignWrites(EngineSecurityFx.Employee, "hr", true, "sales").writes[1], { field: "owningBusinessUnit", value: "hr" });
-    assert.equal(evaluator.AssignWrites(EngineSecurityFx.Department, "hr", true, undefined).outcome, AssignOutcome.Unsupported);
-    assert.equal(evaluator.AssignWrites(EngineSecurityFx.Employee, "nope", true, undefined).outcome, AssignOutcome.UnknownTeam);
+    assert.deepEqual(evaluator.AssignWrites(EngineSecurityFx.Tenant, EngineSecurityFx.Employee, "hr", true, "sales").writes[1], { field: "owningBusinessUnit", value: "hr" });
+    assert.equal(evaluator.AssignWrites(EngineSecurityFx.Tenant, EngineSecurityFx.Department, "hr", true, undefined).outcome, AssignOutcome.Unsupported);
+    assert.equal(evaluator.AssignWrites(EngineSecurityFx.Tenant, EngineSecurityFx.Employee, "nope", true, undefined).outcome, AssignOutcome.UnknownTeam);
 });
