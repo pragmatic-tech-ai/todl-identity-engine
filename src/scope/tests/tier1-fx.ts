@@ -1,6 +1,6 @@
 import { MemberKind, ValueType, type IDefinitionDescription, type ISchemaDescription, type MemberInput } from "@pragmatic-tech-ai/graph";
 import { SecurityAction, SecurityDepth, type IEdgeConcept, type IPackageRole, type IPackageSecurity } from "@pragmatic-tech-ai/todl";
-import { SystemNames, TodlNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
+import { ShareRight, SystemNames, TodlNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
 import {
     AccessLevel, BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind, PrivilegeAction,
     type IProfileAssignmentConfig, type IRoleOverrideConfig, type ISecurityModelConfig,
@@ -65,7 +65,7 @@ export class Tier1Fx
     private static readonly CoreModel = "todl";
     private static readonly Taxonomy = "taxonomy";
     private static readonly Broader = "broader";
-    private static readonly ShareFlags: readonly string[] = ["read", "update", "delete", "assign", "share"];
+    private static readonly ShareFlags: readonly string[] = Object.values(ShareRight);
 
     public static Catalog(): ITier1Catalog
     {

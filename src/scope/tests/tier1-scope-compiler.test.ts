@@ -129,11 +129,15 @@ test("platform vocabulary is readable by all and writable by none", () =>
         for (const concept of [TodlNames.Term, TodlNames.Element])
         {
             const rules = scope.Writes.get(concept);
-            for (const rule of [rules?.Create, rules?.Update, rules?.Delete])
+            for (const rule of [rules?.Create, rules?.Update, rules?.Delete, rules?.Append])
             {
                 assert.deepEqual(rule, Fx.Others(concept), id + Fx.Space + concept);
             }
+            assert.equal(rules?.AppendTo, undefined, id + Fx.Space + concept);
         }
+        const grant = scope.Writes.get(SystemNames.ShareGrant);
+        assert.deepEqual(grant?.Append, Fx.Others(SystemNames.ShareGrant), id);
+        assert.deepEqual(grant?.AppendTo, Fx.Others(SystemNames.ShareGrant), id);
     }
 });
 

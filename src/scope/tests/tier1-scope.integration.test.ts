@@ -136,6 +136,7 @@ test("an assignment to a project alice cannot see is neither matched nor counted
     const scope = IntegrationFx.Scope(Tier1Fx.Alice);
     const matched = Cypher.CypherEngine.ToDto(await cypher.Execute(scope, IntegrationFx.MatchAssignments));
     assert.equal(matched.Rows.length, 1);
+    assert.equal((matched.Rows[0][0] as Cypher.NodeCellDto).$node.id, IntegrationFx.A1);
     const counted = Cypher.CypherEngine.ToDto(await cypher.Execute(scope, IntegrationFx.CountAssignments));
     assert.equal(Number(counted.Rows[0][0]), 1);
 }));

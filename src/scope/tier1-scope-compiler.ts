@@ -5,7 +5,7 @@ import { AccessDepthEvaluator } from "../security/access-depth-evaluator.js";
 import type { TenantSecurityModel } from "../security/tenant-security-model.js";
 import type { Tier1Diagnostic } from "../security/tier1-diagnostic.js";
 import { Tier1Catalog, type ITier1Catalog } from "./tier1-catalog.js";
-import { Tier1Grants, Tier1Predicates } from "./tier1-grants.js";
+import { Tier1Depth, Tier1Grants, Tier1Predicates } from "./tier1-grants.js";
 
 /** The per-principal inputs of one compile. */
 class CompileContext
@@ -13,7 +13,7 @@ class CompileContext
     public constructor(
         public readonly Principal: Principal,
         public readonly Evaluator: AccessDepthEvaluator,
-        public readonly Grants: Tier1Grants,
+        public readonly Depth: Tier1Depth,
         public readonly Subjects: IShareSubjects,
         public readonly Stored: ReadonlySet<string>)
     {
@@ -42,7 +42,7 @@ export class Tier1ScopeCompiler
 
     public static Grants(principal: Principal, security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): Tier1Grants
     {
-        return Tier1Grants.For(Tier1ScopeCompiler.Evaluator(security, model, catalog), principal);
+        return Tier1Grants.For(Tier1Depth.For(Tier1ScopeCompiler.Evaluator(security, model, catalog), principal));
     }
 
     /** Every dropped or reinterpreted entry of the environment setting against the deployed packages. */
@@ -64,14 +64,14 @@ export class Tier1ScopeCompiler
         }
         const stored = Tier1Catalog.EngineStoredConcepts(catalog);
         const evaluator = AccessDepthEvaluator.For(security, model, stored);
-        const grants = Tier1Grants.For(evaluator, principal);
-        if (grants.IsSystemAdministrator())
+        const depth = Tier1Depth.For(evaluator, principal);
+        if (depth.IsSystemAdministrator())
         {
             return assign ? AccessScope.Build({ Default: AccessDefault.Allow }) : Tier1ScopeCompiler.Administrator();
         }
         const subjects: IShareSubjects = { PrincipalId: principal.Id, Teams: evaluator.MembershipOf(principal).teams };
         const edges = new Set<string>(security.EdgeConcepts.map(e => e.Concept));
-        const context = new CompileContext(principal, evaluator, grants, subjects, stored);
+        const context = new CompileContext(principal, evaluator, depth, subjects, stored);
         const rows = new Map<string, Predicate>();
         const writes = new Map<string, IWriteRules>();
         for (const concept of stored)
@@ -135,8 +135,8 @@ export class Tier1ScopeCompiler
      */
     private static Guarded(context: CompileContext, concept: string, action: PrivilegeAction, right: ShareRight | undefined): Predicate
     {
-        const terms: Predicate[] = [...context.Grants.CoverTerms(action, concept)];
-        if (right !== undefined && context.Evaluator.IsOwned(concept) && context.Grants.Level(action, concept) !== AccessLevel.None)
+        const terms: Predicate[] = [...context.Depth.Terms(action, concept)];
+        if (right !== undefined && context.Evaluator.IsOwned(concept) && context.Depth.TableLevel(action, concept) !== AccessLevel.None)
         {
             terms.push(ShareGrantScope.Widening(context.Subjects, right));
         }
@@ -184,15 +184,18 @@ export class Tier1ScopeCompiler
         return hidden;
     }
 
-    /** Rule 6 (PR6, T10): the platform vocabulary is readable by all and writable by none; grants are the share service's. */
+    /** Rule 6 (PR6, T10, R21, R22): the platform vocabulary is readable by all and writable by none; grants are the share service's. */
     private static Platform(context: CompileContext, rows: Map<string, Predicate>, writes: Map<string, IWriteRules>): void
     {
         for (const concept of [TodlNames.Element, TodlNames.Term, SystemNames.ShareGrant])
         {
             if (context.Stored.has(concept))
             {
+                // Vocabulary relinks (a term's broader) are vocabulary writes, so no Append; records stay linkable to terms, so
+                // no AppendTo on Term/Element. A grant's record is never relinked by its grantee (R22): AppendTo too.
                 const none = Tier1Predicates.Guard(concept, Predicate.False);
-                writes.set(concept, { Create: none, Update: none, Delete: none });
+                const rules: IWriteRules = { Create: none, Update: none, Delete: none, Append: none };
+                writes.set(concept, concept === SystemNames.ShareGrant ? { ...rules, AppendTo: none } : rules);
             }
         }
         if (context.Stored.has(TodlNames.Term))

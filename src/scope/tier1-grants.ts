@@ -47,10 +47,10 @@ export class Tier1Predicates
 }
 
 /**
- * One principal's tier-1 grants over the fixed system fields (spec §5, PR5): the depth each role source grants, as
- * unguarded predicates on `owner` / `owningBusinessUnit`. For the checks an AccessScope cannot express (share, invoke).
+ * One principal's per-role-source depth terms over the fixed system fields (spec §5, PR5). Internal to the scope
+ * compiler, which appends the share widening to the terms before the Or is collapsed; not exported from the package.
  */
-export class Tier1Grants
+export class Tier1Depth
 {
     private constructor(
         private readonly evaluator: AccessDepthEvaluator,
@@ -61,13 +61,12 @@ export class Tier1Grants
     {
     }
 
-    public static For(evaluator: AccessDepthEvaluator, principal: Principal): Tier1Grants
+    public static For(evaluator: AccessDepthEvaluator, principal: Principal): Tier1Depth
     {
-        const model = evaluator.Model();
-        const active = model.IsActive(principal);
+        const active = evaluator.Model().IsActive(principal);
         const administrator = active && evaluator.IsSystemAdministrator(principal);
         const owners = active ? [principal.Id, ...evaluator.MembershipOf(principal).teams] : [];
-        return new Tier1Grants(evaluator, principal, active, administrator, owners);
+        return new Tier1Depth(evaluator, principal, active, administrator, owners);
     }
 
     public IsSystemAdministrator(): boolean
@@ -75,34 +74,14 @@ export class Tier1Grants
         return this.administrator;
     }
 
-    /** The principal's highest depth over every role source; Organization for a System Administrator, None when inactive. */
-    public Level(action: PrivilegeAction, concept: string): AccessLevel
+    /** The highest depth over every role source from the role table (a System Administrator holds none there); None when inactive. */
+    public TableLevel(action: PrivilegeAction, concept: string): AccessLevel
     {
-        if (this.administrator)
-        {
-            return AccessLevel.Organization;
-        }
         return this.active ? this.evaluator.EffectiveLevel(this.principal, action, concept) : AccessLevel.None;
     }
 
-    /** Depth(K, a): the records of `concept` the action reaches, unguarded and without shares. True for a System Administrator. */
-    public Covers(action: PrivilegeAction, concept: string): Predicate
-    {
-        if (this.administrator)
-        {
-            return Predicate.True;
-        }
-        return Tier1Predicates.AnyOf(this.CoverTerms(action, concept));
-    }
-
-    /** The owners a User depth matches: the principal and its active teams. */
-    public Owners(): readonly string[]
-    {
-        return this.owners;
-    }
-
-    /** One DepthAt term per role source (PR5), before the Or is collapsed; the compiler appends the share widening to it. */
-    public CoverTerms(action: PrivilegeAction, concept: string): readonly Predicate[]
+    /** One DepthAt term per role source, uncollapsed; a System Administrator is the caller's special case. */
+    public Terms(action: PrivilegeAction, concept: string): readonly Predicate[]
     {
         if (!this.active)
         {
@@ -133,5 +112,43 @@ export class Tier1Grants
             default:
                 return Predicate.False;
         }
+    }
+}
+
+/**
+ * One principal's tier-1 grants over the fixed system fields (spec §5, PR5): the depth each role source grants, as
+ * unguarded predicates on `owner` / `owningBusinessUnit`. For the checks an AccessScope cannot express (share, invoke).
+ */
+export class Tier1Grants
+{
+    private constructor(private readonly depth: Tier1Depth)
+    {
+    }
+
+    /** Built by Tier1ScopeCompiler.Grants. */
+    public static For(depth: Tier1Depth): Tier1Grants
+    {
+        return new Tier1Grants(depth);
+    }
+
+    public IsSystemAdministrator(): boolean
+    {
+        return this.depth.IsSystemAdministrator();
+    }
+
+    /** The principal's highest depth over every role source; Organization for a System Administrator, None when inactive. */
+    public Level(action: PrivilegeAction, concept: string): AccessLevel
+    {
+        return this.depth.IsSystemAdministrator() ? AccessLevel.Organization : this.depth.TableLevel(action, concept);
+    }
+
+    /** Depth(K, a): the records of `concept` the action reaches, unguarded and without shares. True for a System Administrator. */
+    public Covers(action: PrivilegeAction, concept: string): Predicate
+    {
+        if (this.depth.IsSystemAdministrator())
+        {
+            return Predicate.True;
+        }
+        return Tier1Predicates.AnyOf(this.depth.Terms(action, concept));
     }
 }
