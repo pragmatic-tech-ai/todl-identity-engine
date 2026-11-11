@@ -1,62 +1,58 @@
-import { OwnershipSourceKind } from "@pragmatic-tech-ai/todl-identity";
-import type { ISecurityModelConfig, IOwnershipRuleConfig, IOwnershipSource, ITeamConfig, IMembershipConfig } from "@pragmatic-tech-ai/todl-identity";
-import { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
+import { BusinessUnitHierarchy, IdpDirectorySnapshot, SecurityModelValidator, TeamMembershipRows, type ISecurityModelConfig, type Principal } from "@pragmatic-tech-ai/todl-identity";
 import { MembershipResolver } from "./membership-resolver.js";
-import { OwnershipResolver } from "./ownership-resolver.js";
-import { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 
-export class MalformedSecurityModelError extends Error
+/** Where a principal sits in the business-unit tree. */
+export interface IPrincipalPlacement
 {
-    public constructor(message: string)
-    {
-        super(message);
-        this.name = new.target.name;
-    }
+    readonly PrincipalId: string;
+    readonly HomeBusinessUnitId: string;
 }
 
+/** An environment's organisation facts: the validated C5 setting, its business-unit tree, the IdP directory and team membership. */
 export class TenantSecurityModel
 {
     public static readonly DefaultRootBusinessUnitId = "root";
 
     private static readonly DefaultRootName = "Root";
-    private static readonly DuplicateTeamMessage = "team id is duplicated: ";
-    private static readonly UnknownTeamBuMessage = "team references unknown business unit: ";
-    private static readonly UnknownMembershipBuMessage = "membership references unknown business unit: ";
-    private static readonly UnknownMembershipTeamMessage = "membership references unknown team: ";
-    private static readonly EmptyConceptMessage = "ownership rule has an empty concept";
-    private static readonly DuplicateConceptMessage = "ownership rule concept is duplicated: ";
-    private static readonly UnknownOwningBuMessage = "ownership rule references unknown business unit: ";
-    private static readonly UnknownSourceKindMessage = "ownership source has an unknown kind: ";
-    private static readonly EmptySourceValueMessage = "ownership source has an empty value for concept: ";
+
+    private readonly teamUnits: ReadonlyMap<string, string>;
 
     private constructor(
+        private readonly config: ISecurityModelConfig,
         private readonly hierarchy: BusinessUnitHierarchy,
-        private readonly membership: MembershipResolver,
-        private readonly ownership: OwnershipResolver,
-        private readonly fieldSecurity: FieldSecurityEvaluator)
+        private readonly directory: IdpDirectorySnapshot,
+        private readonly membership: MembershipResolver)
     {
+        this.teamUnits = new Map<string, string>(config.teams.map(t => [t.id, t.businessUnitId]));
     }
 
-    public static FromConfig(config: ISecurityModelConfig): TenantSecurityModel
+    /** Throws InvalidSecurityModelError when the setting is not valid. */
+    public static FromConfig(config: ISecurityModelConfig, directory: IdpDirectorySnapshot): TenantSecurityModel
     {
+        SecurityModelValidator.AssertValid(config);
         const hierarchy = BusinessUnitHierarchy.FromConfig(config.businessUnits);
-        const teamIds = TenantSecurityModel.ValidateTeams(config.teams, hierarchy);
-        TenantSecurityModel.ValidateMembership(config.membership, hierarchy, teamIds);
-        TenantSecurityModel.ValidateOwnership(config.ownershipRules, hierarchy);
-        const membership = new MembershipResolver(config.membership, hierarchy);
-        const fieldSecurity = config.fieldSecurity === undefined
-            ? FieldSecurityEvaluator.Open()
-            : FieldSecurityEvaluator.FromConfig(config.fieldSecurity, membership);
-        return new TenantSecurityModel(hierarchy, membership, new OwnershipResolver(config.ownershipRules, hierarchy), fieldSecurity);
+        const membership = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, directory));
+        return new TenantSecurityModel(config, hierarchy, directory, membership);
     }
 
+    /** A root-only tree, nobody placed, no teams, on a non-authoritative directory. */
     public static Empty(): TenantSecurityModel
     {
-        const hierarchy = BusinessUnitHierarchy.FromConfig([
-            { id: TenantSecurityModel.DefaultRootBusinessUnitId, name: TenantSecurityModel.DefaultRootName },
-        ]);
-        const membership: IMembershipConfig = { claimsMapping: [], overrides: [] };
-        return new TenantSecurityModel(hierarchy, new MembershipResolver(membership, hierarchy), new OwnershipResolver([], hierarchy), FieldSecurityEvaluator.Open());
+        const config: ISecurityModelConfig = {
+            businessUnits: [{ id: TenantSecurityModel.DefaultRootBusinessUnitId, name: TenantSecurityModel.DefaultRootName }],
+            users: [],
+            teams: [],
+            roleAssignments: [],
+            profileAssignments: [],
+            roleOverrides: [],
+            profileOverrides: [],
+        };
+        return TenantSecurityModel.FromConfig(config, IdpDirectorySnapshot.NonAuthoritative(new Date(0)));
+    }
+
+    public Config(): ISecurityModelConfig
+    {
+        return this.config;
     }
 
     public Hierarchy(): BusinessUnitHierarchy
@@ -64,101 +60,30 @@ export class TenantSecurityModel
         return this.hierarchy;
     }
 
+    public Directory(): IdpDirectorySnapshot
+    {
+        return this.directory;
+    }
+
     public Membership(): MembershipResolver
     {
         return this.membership;
     }
 
-    public Ownership(): OwnershipResolver
+    /** False when the IdP records the user as disabled or deleted; such a principal holds nothing. */
+    public IsActive(principal: Principal): boolean
     {
-        return this.ownership;
+        return this.directory.IsActive(principal);
     }
 
-    public FieldSecurity(): FieldSecurityEvaluator
+    /** A principal without a placement, and the system principal, sit at the root (C7). */
+    public PlacementOf(principal: Principal): IPrincipalPlacement
     {
-        return this.fieldSecurity;
+        return { PrincipalId: principal.Id, HomeBusinessUnitId: this.membership.Resolve(principal).homeBusinessUnit };
     }
 
-    private static ValidateTeams(teams: readonly ITeamConfig[], hierarchy: BusinessUnitHierarchy): ReadonlySet<string>
+    public TeamBusinessUnit(teamId: string): string | undefined
     {
-        const ids = new Set<string>();
-        for (const team of teams)
-        {
-            if (ids.has(team.id))
-            {
-                throw new MalformedSecurityModelError(TenantSecurityModel.DuplicateTeamMessage + team.id);
-            }
-            ids.add(team.id);
-            if (team.owningBusinessUnit !== undefined && !hierarchy.Has(team.owningBusinessUnit))
-            {
-                throw new MalformedSecurityModelError(TenantSecurityModel.UnknownTeamBuMessage + team.owningBusinessUnit);
-            }
-        }
-        return ids;
-    }
-
-    private static ValidateMembership(config: IMembershipConfig, hierarchy: BusinessUnitHierarchy, teamIds: ReadonlySet<string>): void
-    {
-        for (const rule of config.claimsMapping)
-        {
-            TenantSecurityModel.ValidateMembershipRefs(rule.homeBusinessUnit, rule.teams, hierarchy, teamIds);
-        }
-        for (const override of config.overrides)
-        {
-            TenantSecurityModel.ValidateMembershipRefs(override.homeBusinessUnit, override.teams, hierarchy, teamIds);
-        }
-    }
-
-    private static ValidateMembershipRefs(home: string | undefined, teams: readonly string[] | undefined, hierarchy: BusinessUnitHierarchy, teamIds: ReadonlySet<string>): void
-    {
-        if (home !== undefined && !hierarchy.Has(home))
-        {
-            throw new MalformedSecurityModelError(TenantSecurityModel.UnknownMembershipBuMessage + home);
-        }
-        for (const team of teams ?? [])
-        {
-            if (!teamIds.has(team))
-            {
-                throw new MalformedSecurityModelError(TenantSecurityModel.UnknownMembershipTeamMessage + team);
-            }
-        }
-    }
-
-    private static ValidateOwnership(rules: readonly IOwnershipRuleConfig[], hierarchy: BusinessUnitHierarchy): void
-    {
-        const concepts = new Set<string>();
-        for (const rule of rules)
-        {
-            if (rule.concept.length === 0)
-            {
-                throw new MalformedSecurityModelError(TenantSecurityModel.EmptyConceptMessage);
-            }
-            if (concepts.has(rule.concept))
-            {
-                throw new MalformedSecurityModelError(TenantSecurityModel.DuplicateConceptMessage + rule.concept);
-            }
-            concepts.add(rule.concept);
-            TenantSecurityModel.ValidateSource(rule.owningBusinessUnit, rule.concept, hierarchy, true);
-            if (rule.owner !== undefined)
-            {
-                TenantSecurityModel.ValidateSource(rule.owner, rule.concept, hierarchy, false);
-            }
-        }
-    }
-
-    private static ValidateSource(source: IOwnershipSource, concept: string, hierarchy: BusinessUnitHierarchy, isBusinessUnit: boolean): void
-    {
-        if (source.kind !== OwnershipSourceKind.Fixed && source.kind !== OwnershipSourceKind.FromField)
-        {
-            throw new MalformedSecurityModelError(TenantSecurityModel.UnknownSourceKindMessage + String(source.kind));
-        }
-        if (source.value.length === 0)
-        {
-            throw new MalformedSecurityModelError(TenantSecurityModel.EmptySourceValueMessage + concept);
-        }
-        if (isBusinessUnit && source.kind === OwnershipSourceKind.Fixed && !hierarchy.Has(source.value))
-        {
-            throw new MalformedSecurityModelError(TenantSecurityModel.UnknownOwningBuMessage + source.value);
-        }
+        return this.teamUnits.get(teamId);
     }
 }

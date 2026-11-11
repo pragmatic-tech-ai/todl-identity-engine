@@ -1,5 +1,4 @@
-import type { IMembershipConfig, IMembershipClaimRule, IMembershipOverride, Principal } from "@pragmatic-tech-ai/todl-identity";
-import type { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
+import { SystemPrincipal, type BusinessUnitHierarchy, type ISecurityModelConfig, type Principal, type TeamMembershipRows } from "@pragmatic-tech-ai/todl-identity";
 
 export interface IMembership
 {
@@ -7,69 +6,31 @@ export interface IMembership
     readonly teams: readonly string[];
 }
 
+/** A principal's home unit (its placement, else the root) and its active teams (synced ∪ manual rows of active identities). */
 export class MembershipResolver
 {
-    private static readonly GroupsChannel = "group";
+    private readonly placements: ReadonlyMap<string, string>;
 
     public constructor(
-        private readonly config: IMembershipConfig,
-        private readonly hierarchy: BusinessUnitHierarchy)
+        config: ISecurityModelConfig,
+        private readonly hierarchy: BusinessUnitHierarchy,
+        private readonly rows: TeamMembershipRows)
     {
+        this.placements = new Map<string, string>(config.users.map(u => [u.principalId, u.businessUnitId]));
     }
 
     public Resolve(principal: Principal): IMembership
     {
-        let home: string | undefined = undefined;
-        const teams = new Set<string>();
-        for (const rule of this.config.claimsMapping)
-        {
-            if (!MembershipResolver.Matches(rule, principal))
-            {
-                continue;
-            }
-            if (home === undefined && rule.homeBusinessUnit !== undefined)
-            {
-                home = rule.homeBusinessUnit;
-            }
-            for (const team of rule.teams ?? [])
-            {
-                teams.add(team);
-            }
-        }
-        let resolvedTeams: readonly string[] = [...teams];
-        const override = this.OverrideFor(principal.Id);
-        if (override !== undefined)
-        {
-            if (override.homeBusinessUnit !== undefined)
-            {
-                home = override.homeBusinessUnit;
-            }
-            if (override.teams !== undefined)
-            {
-                resolvedTeams = [...override.teams];
-            }
-        }
-        return { homeBusinessUnit: home ?? this.hierarchy.RootId(), teams: resolvedTeams };
+        return { homeBusinessUnit: this.HomeOf(principal), teams: this.rows.TeamsOf(principal) };
     }
 
-    private static Matches(rule: IMembershipClaimRule, principal: Principal): boolean
+    /** The system principal, and a principal without a placement, sit at the root (C7). */
+    private HomeOf(principal: Principal): string
     {
-        if (rule.claim === MembershipResolver.GroupsChannel)
+        if (SystemPrincipal.Is(principal))
         {
-            return principal.HasGroup(rule.value);
+            return this.hierarchy.RootId();
         }
-        return principal.Claim(rule.claim) === rule.value;
-    }
-
-    private OverrideFor(principalId: string): IMembershipOverride | undefined
-    {
-        for (const override of this.config.overrides)
-        {
-            if (override.principalId === principalId)
-            {
-                return override;
-            }
-        }
-        return undefined;
+        return this.placements.get(principal.Id) ?? this.hierarchy.RootId();
     }
 }

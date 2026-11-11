@@ -10,8 +10,10 @@ Surface:
 - `SecurityVocabulary`: exhaustive value maps from TODL's `SecurityAction` /
   `SecurityDepth` to identity's `PrivilegeAction` / `AccessLevel`; an unmapped
   value throws.
-- Tier-1 security evaluation: `TenantSecurityModel`, `MembershipResolver`,
-  `OwnershipResolver`, `AccessDepthEvaluator` and `FieldSecurityEvaluator`.
+- Tier-1 security evaluation over the environment's package security (S1
+  `IEnvironmentSecurity`) and its C5 setting: `TenantSecurityModel`,
+  `MembershipResolver`, `EffectiveRoleTable`, `AccessDepthEvaluator` and
+  `FieldSecurityEvaluator`; dropped setting entries surface as `Tier1Diagnostic`.
 
 Business-unit hierarchy lives in `@pragmatic-tech-ai/todl-identity`. Packages are
 consumed from their root barrels and via compiled `dist` output.

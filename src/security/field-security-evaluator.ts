@@ -1,75 +1,92 @@
-import { PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
-import type { IFieldSecurityConfig, IFieldProfileConfig, IFieldGrantConfig, IFieldProfileAssignmentConfig, Principal } from "@pragmatic-tech-ai/todl-identity";
+import type { IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
+import { PrivilegeAction, type IProfileAssignmentConfig, type IProfileOverrideConfig, type Principal } from "@pragmatic-tech-ai/todl-identity";
 import type { MembershipResolver } from "./membership-resolver.js";
+import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
 
-export class MalformedFieldSecurityError extends Error
+interface IFieldRights
 {
-    public constructor(message: string)
-    {
-        super(message);
-        this.name = new.target.name;
-    }
+    readonly Read: boolean;
+    readonly Update: boolean;
+    readonly Create: boolean;
 }
 
+/**
+ * Field-level security over the packages' secured fields: a profile's rights are its package defaults with the
+ * environment's profile overrides on top, and a profile reaches a principal directly or through an active team.
+ */
 export class FieldSecurityEvaluator
 {
-    private static readonly GroupsChannel = "group";
     private static readonly KeySeparator = "\u0000";
-    private static readonly DuplicateFieldMessage = "secured field is duplicated: ";
-    private static readonly DuplicateProfileMessage = "field profile id is duplicated: ";
-    private static readonly EmptyConceptMessage = "secured field has an empty concept";
-    private static readonly EmptyFieldMessage = "secured field has an empty field name";
-    private static readonly UnknownProfileMessage = "field profile assignment references an unknown profile: ";
+    private static readonly FieldSeparator = ".";
+    private static readonly UnknownAssignedMessage = "profile assignment names a profile no deployed package defines: ";
+    private static readonly OverrideUnknownProfileMessage = "profile override names a profile no deployed package defines: ";
+    private static readonly OverrideUnknownFieldMessage = "profile override names a field no deployed package secures: ";
 
     private constructor(
-        private readonly secured: ReadonlySet<string>,
-        private readonly profilesById: ReadonlyMap<string, IFieldProfileConfig>,
-        private readonly assignment: IFieldProfileAssignmentConfig,
-        private readonly membership: MembershipResolver | undefined)
+        private readonly secured: ReadonlyMap<string, { readonly Concept: string; readonly Field: string }>,
+        private readonly profiles: ReadonlyMap<string, ReadonlyMap<string, IFieldRights>>,
+        private readonly assignments: readonly IProfileAssignmentConfig[],
+        private readonly membership: MembershipResolver | undefined,
+        private readonly diagnostics: readonly Tier1Diagnostic[])
     {
     }
 
+    /** No secured fields: every field is readable and writable. */
     public static Open(): FieldSecurityEvaluator
     {
-        return new FieldSecurityEvaluator(new Set<string>(), new Map<string, IFieldProfileConfig>(), { claimsMapping: [], overrides: [], teamProfiles: [] }, undefined);
+        return new FieldSecurityEvaluator(new Map(), new Map(), [], undefined, []);
     }
 
-    public static FromConfig(config: IFieldSecurityConfig, membership: MembershipResolver): FieldSecurityEvaluator
+    public static For(security: IEnvironmentSecurity, assignments: readonly IProfileAssignmentConfig[], overrides: readonly IProfileOverrideConfig[], membership: MembershipResolver): FieldSecurityEvaluator
     {
-        const secured = new Set<string>();
-        for (const field of config.securedFields)
+        const secured = new Map<string, { readonly Concept: string; readonly Field: string }>();
+        const profiles = new Map<string, Map<string, IFieldRights>>();
+        for (const id of [...security.Packages.keys()].sort())
         {
-            if (field.concept.length === 0)
+            const pkg = security.Packages.get(id);
+            for (const field of pkg?.SecuredFields ?? [])
             {
-                throw new MalformedFieldSecurityError(FieldSecurityEvaluator.EmptyConceptMessage);
+                secured.set(FieldSecurityEvaluator.Key(field.Concept, field.Field), { Concept: field.Concept, Field: field.Field });
             }
-            if (field.field.length === 0)
+            for (const profile of pkg?.FieldProfiles ?? [])
             {
-                throw new MalformedFieldSecurityError(FieldSecurityEvaluator.EmptyFieldMessage);
+                const rights = profiles.get(profile.Name) ?? new Map<string, IFieldRights>();
+                for (const entry of profile.Fields)
+                {
+                    rights.set(FieldSecurityEvaluator.Key(entry.Concept, entry.Field), { Read: entry.Read, Update: entry.Update, Create: entry.Create });
+                }
+                profiles.set(profile.Name, rights);
             }
-            const key = FieldSecurityEvaluator.Key(field.concept, field.field);
-            if (secured.has(key))
-            {
-                throw new MalformedFieldSecurityError(FieldSecurityEvaluator.DuplicateFieldMessage + key);
-            }
-            secured.add(key);
         }
-        const profilesById = new Map<string, IFieldProfileConfig>();
-        for (const profile of config.profiles)
+        const diagnostics: Tier1Diagnostic[] = [];
+        for (const override of overrides)
         {
-            if (profilesById.has(profile.id))
+            const rights = profiles.get(override.profile);
+            const key = FieldSecurityEvaluator.Key(override.concept, override.field);
+            if (rights === undefined)
             {
-                throw new MalformedFieldSecurityError(FieldSecurityEvaluator.DuplicateProfileMessage + profile.id);
+                FieldSecurityEvaluator.Report(diagnostics, Tier1DiagnosticCode.OverrideUnknownProfile, override.profile, FieldSecurityEvaluator.OverrideUnknownProfileMessage);
+                continue;
             }
-            profilesById.set(profile.id, profile);
+            if (!secured.has(key))
+            {
+                const subject = override.concept + FieldSecurityEvaluator.FieldSeparator + override.field;
+                FieldSecurityEvaluator.Report(diagnostics, Tier1DiagnosticCode.OverrideUnknownField, subject, FieldSecurityEvaluator.OverrideUnknownFieldMessage);
+                continue;
+            }
+            rights.set(key, { Read: override.read, Update: override.update, Create: override.create });
         }
-        FieldSecurityEvaluator.ValidateAssignment(config.profileAssignment, profilesById);
-        return new FieldSecurityEvaluator(secured, profilesById, config.profileAssignment, membership);
-    }
-
-    public HasSecuredFields(): boolean
-    {
-        return this.secured.size > 0;
+        const kept: IProfileAssignmentConfig[] = [];
+        for (const assignment of assignments)
+        {
+            if (!profiles.has(assignment.profile))
+            {
+                FieldSecurityEvaluator.Report(diagnostics, Tier1DiagnosticCode.UnknownAssignedProfile, assignment.profile, FieldSecurityEvaluator.UnknownAssignedMessage);
+                continue;
+            }
+            kept.push(assignment);
+        }
+        return new FieldSecurityEvaluator(secured, profiles, kept, membership, diagnostics);
     }
 
     public IsSecured(concept: string, field: string): boolean
@@ -77,119 +94,78 @@ export class FieldSecurityEvaluator
         return this.secured.has(FieldSecurityEvaluator.Key(concept, field));
     }
 
+    public SecuredFields(): readonly { readonly Concept: string; readonly Field: string }[]
+    {
+        return [...this.secured.values()];
+    }
+
     public CanReadField(principal: Principal, concept: string, field: string): boolean
     {
         return this.Granted(principal, concept, field, PrivilegeAction.Read);
     }
 
-    public CanWriteField(principal: Principal, concept: string, field: string, action: PrivilegeAction): boolean
+    public CanWriteField(principal: Principal, concept: string, field: string, action: PrivilegeAction.Create | PrivilegeAction.Update): boolean
     {
         return this.Granted(principal, concept, field, action);
     }
 
+    public Diagnostics(): readonly Tier1Diagnostic[]
+    {
+        return this.diagnostics;
+    }
+
     private Granted(principal: Principal, concept: string, field: string, action: PrivilegeAction): boolean
     {
-        if (!this.IsSecured(concept, field))
+        const key = FieldSecurityEvaluator.Key(concept, field);
+        if (!this.secured.has(key))
         {
             return true;
         }
-        for (const profileId of this.AssignedProfiles(principal))
+        for (const profile of this.ProfilesOf(principal))
         {
-            const profile = this.profilesById.get(profileId);
-            if (profile === undefined)
+            const rights = this.profiles.get(profile)?.get(key);
+            if (rights !== undefined && FieldSecurityEvaluator.Allows(rights, action))
             {
-                continue;
-            }
-            for (const grant of profile.grants)
-            {
-                if (grant.concept === concept && grant.field === field && FieldSecurityEvaluator.Allows(grant, action))
-                {
-                    return true;
-                }
+                return true;
             }
         }
         return false;
     }
 
-    private static Allows(grant: IFieldGrantConfig, action: PrivilegeAction): boolean
+    private ProfilesOf(principal: Principal): ReadonlySet<string>
     {
-        if (action === PrivilegeAction.Read)
-        {
-            return grant.read === true;
-        }
-        if (action === PrivilegeAction.Update)
-        {
-            return grant.update === true;
-        }
-        if (action === PrivilegeAction.Create)
-        {
-            return grant.create === true;
-        }
-        return false;
-    }
-
-    private AssignedProfiles(principal: Principal): ReadonlySet<string>
-    {
+        const teams = this.membership?.Resolve(principal).teams ?? [];
         const out = new Set<string>();
-        for (const rule of this.assignment.claimsMapping)
+        for (const assignment of this.assignments)
         {
-            if (FieldSecurityEvaluator.Matches(rule.claim, rule.value, principal))
+            if (assignment.principalIds.includes(principal.Id) || assignment.teamIds.some(t => teams.includes(t)))
             {
-                for (const profile of rule.profiles)
-                {
-                    out.add(profile);
-                }
-            }
-        }
-        for (const override of this.assignment.overrides)
-        {
-            if (override.principalId === principal.Id)
-            {
-                for (const profile of override.profiles)
-                {
-                    out.add(profile);
-                }
-            }
-        }
-        if (this.membership !== undefined)
-        {
-            const teams = this.membership.Resolve(principal).teams;
-            for (const grant of this.assignment.teamProfiles)
-            {
-                if (teams.includes(grant.teamId))
-                {
-                    for (const profile of grant.profiles)
-                    {
-                        out.add(profile);
-                    }
-                }
+                out.add(assignment.profile);
             }
         }
         return out;
     }
 
-    private static Matches(claim: string, value: string, principal: Principal): boolean
+    private static Allows(rights: IFieldRights, action: PrivilegeAction): boolean
     {
-        return claim === FieldSecurityEvaluator.GroupsChannel ? principal.HasGroup(value) : principal.Claim(claim) === value;
+        if (action === PrivilegeAction.Read)
+        {
+            return rights.Read;
+        }
+        if (action === PrivilegeAction.Update)
+        {
+            return rights.Update;
+        }
+        if (action === PrivilegeAction.Create)
+        {
+            return rights.Create;
+        }
+        return false;
     }
 
-    private static ValidateAssignment(assignment: IFieldProfileAssignmentConfig, profilesById: ReadonlyMap<string, IFieldProfileConfig>): void
+    private static Report(diagnostics: Tier1Diagnostic[], code: Tier1DiagnosticCode, subject: string, message: string): void
     {
-        const channels: readonly (readonly string[])[] = [
-            ...assignment.claimsMapping.map(r => r.profiles),
-            ...assignment.overrides.map(o => o.profiles),
-            ...assignment.teamProfiles.map(t => t.profiles),
-        ];
-        for (const profiles of channels)
-        {
-            for (const id of profiles)
-            {
-                if (!profilesById.has(id))
-                {
-                    throw new MalformedFieldSecurityError(FieldSecurityEvaluator.UnknownProfileMessage + id);
-                }
-            }
-        }
+        diagnostics.push(new Tier1Diagnostic(code, subject, message + subject));
     }
 
     private static Key(concept: string, field: string): string

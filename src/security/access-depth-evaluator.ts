@@ -1,18 +1,10 @@
-import type { IInstanceView } from "@pragmatic-tech-ai/todl";
-import { PrivilegeAction, AccessLevel } from "@pragmatic-tech-ai/todl-identity";
-import type { ISecurityModelConfig, IRoleConfig, IPrivilegeConfig, IRoleAssignmentConfig, ITeamConfig, Principal } from "@pragmatic-tech-ai/todl-identity";
-import { TenantSecurityModel } from "./tenant-security-model.js";
-import type { FieldSecurityEvaluator } from "./field-security-evaluator.js";
+import { SystemNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
+import { AccessLevel, BaseRole, SystemPrincipal, type IRoleAssignmentConfig, type Principal, type PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { EffectiveRoleTable } from "./effective-role-table.js";
+import { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 import type { IMembership } from "./membership-resolver.js";
-
-export class MalformedRolesError extends Error
-{
-    public constructor(message: string)
-    {
-        super(message);
-        this.name = new.target.name;
-    }
-}
+import { TenantSecurityModel } from "./tenant-security-model.js";
+import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
 
 export enum AssignOutcome
 {
@@ -29,184 +21,153 @@ export interface IAssignComputation
     readonly writes: readonly { field: string; value: string }[];
 }
 
+/**
+ * The roles one principal holds from one source (PR5, Dataverse semantics): the roles assigned to it directly, evaluated
+ * against its home unit, or the roles held through one active team, evaluated against that team's unit.
+ */
+export class RoleSource
+{
+    public constructor(
+        public readonly Roles: ReadonlySet<string>,
+        public readonly BusinessUnitId: string,
+        public readonly TeamId: string | undefined)
+    {
+    }
+}
+
+/** Tier-1 role evaluation for one environment: effective roles per principal and source, and the depth each grants. */
 export class AccessDepthEvaluator
 {
-    private static readonly GroupsChannel = "group";
-    private static readonly LevelOrder: readonly AccessLevel[] =
-    [
-        AccessLevel.None,
-        AccessLevel.User,
-        AccessLevel.BusinessUnit,
-        AccessLevel.BusinessUnitAndChildren,
-        AccessLevel.Organization,
-    ];
-
-    private static readonly DuplicateRoleMessage = "role id is duplicated: ";
-    private static readonly EmptyConceptMessage = "privilege has an empty concept in role: ";
-    private static readonly UnknownActionMessage = "privilege has an unknown action in role: ";
-    private static readonly UnknownLevelMessage = "privilege has an unknown level in role: ";
-    private static readonly UnknownRoleRefMessage = "role assignment references an unknown role: ";
-    private static readonly UnknownTeamRefMessage = "team-role grant references an unknown team: ";
-    private static readonly DuplicateOverrideMessage = "role assignment has a duplicate override for principal: ";
+    private static readonly UnknownAssignedRoleMessage = "role assignment names a role no deployed package or the platform defines: ";
 
     private constructor(
+        private readonly security: IEnvironmentSecurity,
         private readonly model: TenantSecurityModel,
-        private readonly rolesById: ReadonlyMap<string, IRoleConfig>,
-        private readonly assignment: IRoleAssignmentConfig,
-        private readonly teamOwningBusinessUnit: ReadonlyMap<string, string>,
-        private readonly knownTeams: ReadonlySet<string>,
-        private readonly governedConcepts: ReadonlySet<string>)
+        private readonly table: EffectiveRoleTable,
+        private readonly assignments: readonly IRoleAssignmentConfig[],
+        private readonly fieldSecurity: FieldSecurityEvaluator,
+        private readonly diagnostics: readonly Tier1Diagnostic[])
     {
     }
 
-    public static FromConfig(config: ISecurityModelConfig): AccessDepthEvaluator
+    /** `concepts` are the environment's engine-stored concepts; its edge concepts are left out of the role table. */
+    public static For(security: IEnvironmentSecurity, model: TenantSecurityModel, concepts: ReadonlySet<string>): AccessDepthEvaluator
     {
-        const model = TenantSecurityModel.FromConfig(config);
-        const roles = config.roles ?? [];
-        const assignment = config.roleAssignment ?? { claimsMapping: [], overrides: [], teamRoles: [] };
-        const rolesById = AccessDepthEvaluator.IndexRoles(roles);
-        AccessDepthEvaluator.ValidateAssignment(assignment, rolesById, config.teams);
-        const teamOwningBusinessUnit = new Map<string, string>();
-        const knownTeams = new Set<string>();
-        for (const team of config.teams)
+        const config = model.Config();
+        const edges = new Set<string>(security.EdgeConcepts.map(e => e.Concept));
+        const nodes = new Set<string>([...concepts].filter(c => !edges.has(c)));
+        const table = EffectiveRoleTable.Build(security, config.roleOverrides, nodes);
+        const diagnostics: Tier1Diagnostic[] = [...table.Diagnostics()];
+        const assignments: IRoleAssignmentConfig[] = [];
+        for (const assignment of config.roleAssignments)
         {
-            knownTeams.add(team.id);
-            if (team.owningBusinessUnit !== undefined)
+            if (!table.HasRole(assignment.role))
             {
-                teamOwningBusinessUnit.set(team.id, team.owningBusinessUnit);
+                const message = AccessDepthEvaluator.UnknownAssignedRoleMessage + assignment.role;
+                diagnostics.push(new Tier1Diagnostic(Tier1DiagnosticCode.UnknownAssignedRole, assignment.role, message));
+                continue;
             }
+            assignments.push(assignment);
         }
-        const governed = new Set<string>();
-        for (const role of roles)
-        {
-            for (const privilege of role.privileges)
-            {
-                governed.add(privilege.concept);
-            }
-        }
-        for (const rule of config.ownershipRules ?? [])
-        {
-            governed.add(rule.concept);
-        }
-        return new AccessDepthEvaluator(model, rolesById, assignment, teamOwningBusinessUnit, knownTeams, governed);
+        const fieldSecurity = FieldSecurityEvaluator.For(security, config.profileAssignments, config.profileOverrides, model.Membership());
+        diagnostics.push(...fieldSecurity.Diagnostics());
+        return new AccessDepthEvaluator(security, model, table, assignments, fieldSecurity, diagnostics);
     }
 
+    /** No packages, no setting: only the system principal holds anything. */
     public static DenyAll(): AccessDepthEvaluator
     {
-        return new AccessDepthEvaluator(
-            TenantSecurityModel.Empty(),
-            new Map<string, IRoleConfig>(),
-            { claimsMapping: [], overrides: [], teamRoles: [] },
-            new Map<string, string>(),
-            new Set<string>(),
-            new Set<string>());
-    }
-
-    public GovernedConcepts(): ReadonlySet<string>
-    {
-        return this.governedConcepts;
+        const security: IEnvironmentSecurity = { Packages: new Map(), EdgeConcepts: [], OwnedConcepts: () => new Set<string>() };
+        return AccessDepthEvaluator.For(security, TenantSecurityModel.Empty(), new Set<string>());
     }
 
     public EffectiveRoles(principal: Principal): ReadonlySet<string>
     {
-        const roles = new Set<string>(this.DirectRoles(principal));
-        const membership = this.model.Membership().Resolve(principal);
-        for (const teamId of membership.teams)
+        const roles = new Set<string>();
+        for (const source of this.RoleSources(principal))
         {
-            for (const grant of this.assignment.teamRoles)
+            for (const role of source.Roles)
             {
-                if (grant.teamId === teamId)
-                {
-                    for (const role of grant.roles)
-                    {
-                        roles.add(role);
-                    }
-                }
+                roles.add(role);
             }
         }
         return roles;
     }
 
-    public EffectiveLevel(principal: Principal, action: PrivilegeAction, concept: string): AccessLevel
+    /** The direct source first, then one source per active team holding a role, by team id; sources without roles are left out. */
+    public RoleSources(principal: Principal): readonly RoleSource[]
     {
-        let best = AccessLevel.None;
-        for (const roleId of this.EffectiveRoles(principal))
+        if (!this.model.IsActive(principal))
         {
-            const role = this.rolesById.get(roleId);
-            if (role === undefined)
+            return [];
+        }
+        const sources: RoleSource[] = [];
+        const direct = new Set<string>();
+        for (const assignment of this.assignments)
+        {
+            if (assignment.principalIds.includes(principal.Id))
             {
-                continue;
+                direct.add(assignment.role);
             }
-            for (const privilege of role.privileges)
+        }
+        if (SystemPrincipal.Is(principal))
+        {
+            direct.add(BaseRole.SystemAdministrator);
+        }
+        if (direct.size > 0)
+        {
+            sources.push(new RoleSource(direct, this.model.PlacementOf(principal).HomeBusinessUnitId, undefined));
+        }
+        const root = this.model.Hierarchy().RootId();
+        for (const team of [...this.MembershipOf(principal).teams].sort())
+        {
+            const roles = new Set<string>();
+            for (const assignment of this.assignments)
             {
-                if (privilege.action === action && privilege.concept === concept)
+                if (assignment.teamIds.includes(team))
                 {
-                    best = AccessDepthEvaluator.Max(best, privilege.level);
+                    roles.add(assignment.role);
                 }
             }
+            if (roles.size > 0)
+            {
+                sources.push(new RoleSource(roles, this.model.TeamBusinessUnit(team) ?? root, team));
+            }
+        }
+        return sources;
+    }
+
+    /** The highest depth any of the source's roles grants for the action on the concept. */
+    public SourceLevel(source: RoleSource, action: PrivilegeAction, concept: string): AccessLevel
+    {
+        let best = AccessLevel.None;
+        for (const role of source.Roles)
+        {
+            best = EffectiveRoleTable.Max(best, this.table.Level(role, concept, action));
         }
         return best;
     }
 
-    public Allows(principal: Principal, action: PrivilegeAction, view: IInstanceView): boolean
+    public IsSystemAdministrator(principal: Principal): boolean
     {
-        const level = this.EffectiveLevel(principal, action, view.Concept);
-        if (level === AccessLevel.None)
-        {
-            return false;
-        }
-        if (level === AccessLevel.Organization)
-        {
-            return true;
-        }
-        const ownership = this.model.Ownership().Resolve(view);
-        const membership = this.model.Membership().Resolve(principal);
-        if (level === AccessLevel.User)
-        {
-            if (ownership.owner === undefined)
-            {
-                return false;
-            }
-            return ownership.owner === principal.Id || membership.teams.includes(ownership.owner);
-        }
-        const reach = this.ReachBusinessUnits(membership.homeBusinessUnit, membership.teams);
-        if (level === AccessLevel.BusinessUnit)
-        {
-            return reach.has(ownership.owningBusinessUnit);
-        }
-        const hierarchy = this.model.Hierarchy();
-        for (const scope of reach)
-        {
-            if (hierarchy.Contains(scope, ownership.owningBusinessUnit))
-            {
-                return true;
-            }
-        }
-        return false;
+        return this.EffectiveRoles(principal).has(BaseRole.SystemAdministrator);
     }
 
-    public CreateDefaults(principal: Principal, concept: string): readonly { field: string; value: string }[]
+    /** The highest depth over every source; never used to pick a business unit (PR5). */
+    public EffectiveLevel(principal: Principal, action: PrivilegeAction, concept: string): AccessLevel
     {
-        const home = this.model.Membership().Resolve(principal).homeBusinessUnit;
-        return this.model.Ownership().CreateFieldDefaults(concept, principal.Id, home);
+        let best = AccessLevel.None;
+        for (const source of this.RoleSources(principal))
+        {
+            best = EffectiveRoleTable.Max(best, this.SourceLevel(source, action, concept));
+        }
+        return best;
     }
 
-    public FieldSecurity(): FieldSecurityEvaluator
+    /** Whether the concept takes the ownership aspect in this environment (inherited ownership included). */
+    public IsOwned(concept: string): boolean
     {
-        return this.model.FieldSecurity();
-    }
-
-    /** The tenant security model the evaluator decides with (hierarchy, membership, ownership rules, field security). */
-    public Model(): TenantSecurityModel
-    {
-        return this.model;
-    }
-
-    /** The business units a principal reaches: its home unit plus the owning unit of each of its teams. */
-    public ReachOf(principal: Principal): ReadonlySet<string>
-    {
-        const membership = this.model.Membership().Resolve(principal);
-        return this.ReachBusinessUnits(membership.homeBusinessUnit, membership.teams);
+        return this.security.OwnedConcepts().has(concept);
     }
 
     public MembershipOf(principal: Principal): IMembership
@@ -214,19 +175,18 @@ export class AccessDepthEvaluator
         return this.model.Membership().Resolve(principal);
     }
 
-    public IsKnownTeam(teamId: string): boolean
-    {
-        return this.knownTeams.has(teamId);
-    }
-
+    /**
+     * The system-field writes of assigning a record to an owner. An explicit `owningBu` wins; otherwise a team owner gets
+     * its team's unit, a user owner its placement, and the system principal the root.
+     */
     public AssignWrites(concept: string, ownerId: string, ownerIsTeam: boolean, owningBu: string | undefined): IAssignComputation
     {
-        const ownership = this.model.Ownership();
-        if (ownership.OwnerField(concept) === undefined)
+        if (!this.IsOwned(concept))
         {
             return { outcome: AssignOutcome.Unsupported, writes: [] };
         }
-        if (ownerIsTeam && !this.IsKnownTeam(ownerId))
+        const teamUnit = ownerIsTeam ? this.model.TeamBusinessUnit(ownerId) : undefined;
+        if (ownerIsTeam && teamUnit === undefined)
         {
             return { outcome: AssignOutcome.UnknownTeam, writes: [] };
         }
@@ -239,145 +199,43 @@ export class AccessDepthEvaluator
             }
             bu = owningBu;
         }
-        else if (ownerIsTeam)
-        {
-            bu = this.teamOwningBusinessUnit.get(ownerId);
-        }
         else
         {
-            bu = undefined;
+            bu = ownerIsTeam ? teamUnit : this.UserUnitOf(ownerId);
         }
-        if (ownership.BusinessUnitField(concept) !== undefined && bu === undefined)
+        if (bu === undefined)
         {
             return { outcome: AssignOutcome.OwningBusinessUnitRequired, writes: [] };
         }
-        return { outcome: AssignOutcome.Writes, writes: ownership.CreateFieldDefaults(concept, ownerId, bu ?? "") };
+        return {
+            outcome: AssignOutcome.Writes,
+            writes: [{ field: SystemNames.Owner, value: ownerId }, { field: SystemNames.OwningBusinessUnit, value: bu }],
+        };
     }
 
-    private DirectRoles(principal: Principal): readonly string[]
+    public Model(): TenantSecurityModel
     {
-        for (const override of this.assignment.overrides)
-        {
-            if (override.principalId === principal.Id)
-            {
-                return override.roles;
-            }
-        }
-        const roles = new Set<string>();
-        for (const rule of this.assignment.claimsMapping)
-        {
-            if (AccessDepthEvaluator.Matches(rule.claim, rule.value, principal))
-            {
-                for (const role of rule.roles)
-                {
-                    roles.add(role);
-                }
-            }
-        }
-        return [...roles];
+        return this.model;
     }
 
-    private ReachBusinessUnits(homeBusinessUnit: string, teams: readonly string[]): ReadonlySet<string>
+    public FieldSecurity(): FieldSecurityEvaluator
     {
-        const reach = new Set<string>([homeBusinessUnit]);
-        for (const teamId of teams)
-        {
-            const bu = this.teamOwningBusinessUnit.get(teamId);
-            if (bu !== undefined)
-            {
-                reach.add(bu);
-            }
-        }
-        return reach;
+        return this.fieldSecurity;
     }
 
-    private static Matches(claim: string, value: string, principal: Principal): boolean
+    /** Every dropped or reinterpreted entry of the setting: role table, role assignments and field security. */
+    public Diagnostics(): readonly Tier1Diagnostic[]
     {
-        if (claim === AccessDepthEvaluator.GroupsChannel)
-        {
-            return principal.HasGroup(value);
-        }
-        return principal.Claim(claim) === value;
+        return this.diagnostics;
     }
 
-    private static Max(a: AccessLevel, b: AccessLevel): AccessLevel
+    // An assign names a user by id only: the system principal sits at the root, an unplaced user has no resolvable unit.
+    private UserUnitOf(principalId: string): string | undefined
     {
-        return AccessDepthEvaluator.LevelOrder.indexOf(b) > AccessDepthEvaluator.LevelOrder.indexOf(a) ? b : a;
-    }
-
-    private static IndexRoles(roles: readonly IRoleConfig[]): ReadonlyMap<string, IRoleConfig>
-    {
-        const byId = new Map<string, IRoleConfig>();
-        for (const role of roles)
+        if (SystemPrincipal.IsId(principalId))
         {
-            if (byId.has(role.id))
-            {
-                throw new MalformedRolesError(AccessDepthEvaluator.DuplicateRoleMessage + role.id);
-            }
-            for (const privilege of role.privileges)
-            {
-                AccessDepthEvaluator.ValidatePrivilege(privilege, role.id);
-            }
-            byId.set(role.id, role);
+            return this.model.Hierarchy().RootId();
         }
-        return byId;
-    }
-
-    private static ValidatePrivilege(privilege: IPrivilegeConfig, roleId: string): void
-    {
-        if (privilege.concept.length === 0)
-        {
-            throw new MalformedRolesError(AccessDepthEvaluator.EmptyConceptMessage + roleId);
-        }
-        if (!Object.values(PrivilegeAction).includes(privilege.action))
-        {
-            throw new MalformedRolesError(AccessDepthEvaluator.UnknownActionMessage + roleId);
-        }
-        if (AccessDepthEvaluator.LevelOrder.indexOf(privilege.level) < 0)
-        {
-            throw new MalformedRolesError(AccessDepthEvaluator.UnknownLevelMessage + roleId);
-        }
-    }
-
-    private static ValidateAssignment(assignment: IRoleAssignmentConfig, rolesById: ReadonlyMap<string, IRoleConfig>, teams: readonly ITeamConfig[]): void
-    {
-        const teamIds = new Set<string>();
-        for (const team of teams)
-        {
-            teamIds.add(team.id);
-        }
-        for (const rule of assignment.claimsMapping)
-        {
-            AccessDepthEvaluator.AssertKnownRoles(rule.roles, rolesById);
-        }
-        const seenPrincipals = new Set<string>();
-        for (const override of assignment.overrides)
-        {
-            if (seenPrincipals.has(override.principalId))
-            {
-                throw new MalformedRolesError(AccessDepthEvaluator.DuplicateOverrideMessage + override.principalId);
-            }
-            seenPrincipals.add(override.principalId);
-            AccessDepthEvaluator.AssertKnownRoles(override.roles, rolesById);
-        }
-        for (const grant of assignment.teamRoles)
-        {
-            if (!teamIds.has(grant.teamId))
-            {
-                throw new MalformedRolesError(AccessDepthEvaluator.UnknownTeamRefMessage + grant.teamId);
-            }
-            AccessDepthEvaluator.AssertKnownRoles(grant.roles, rolesById);
-        }
-    }
-
-    private static AssertKnownRoles(roles: readonly string[], rolesById: ReadonlyMap<string, IRoleConfig>): void
-    {
-        for (const role of roles)
-        {
-            if (!rolesById.has(role))
-            {
-                throw new MalformedRolesError(AccessDepthEvaluator.UnknownRoleRefMessage + role);
-            }
-        }
+        return this.model.Config().users.find(u => u.principalId === principalId)?.businessUnitId;
     }
 }
