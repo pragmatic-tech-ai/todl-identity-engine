@@ -31,7 +31,7 @@ export class TenantSecurityModel
     {
         SecurityModelValidator.AssertValid(config);
         const hierarchy = BusinessUnitHierarchy.FromConfig(config.businessUnits);
-        const membership = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, directory));
+        const membership = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, directory), directory);
         return new TenantSecurityModel(config, hierarchy, directory, membership);
     }
 

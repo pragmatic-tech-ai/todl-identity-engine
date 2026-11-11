@@ -89,6 +89,7 @@ export class FieldSecurityEvaluator
         return new FieldSecurityEvaluator(secured, profiles, kept, membership, diagnostics);
     }
 
+    /** `concept` is the declaring concept of the field; a caller holding a subconcept resolves the declaring concept first. */
     public IsSecured(concept: string, field: string): boolean
     {
         return this.secured.has(FieldSecurityEvaluator.Key(concept, field));
@@ -99,11 +100,13 @@ export class FieldSecurityEvaluator
         return [...this.secured.values()];
     }
 
+    /** `concept` is the declaring concept of the field (see IsSecured). */
     public CanReadField(principal: Principal, concept: string, field: string): boolean
     {
         return this.Granted(principal, concept, field, PrivilegeAction.Read);
     }
 
+    /** `concept` is the declaring concept of the field (see IsSecured). */
     public CanWriteField(principal: Principal, concept: string, field: string, action: PrivilegeAction.Create | PrivilegeAction.Update): boolean
     {
         return this.Granted(principal, concept, field, action);
@@ -132,8 +135,13 @@ export class FieldSecurityEvaluator
         return false;
     }
 
+    // An inactive principal holds no profile, directly or through a team.
     private ProfilesOf(principal: Principal): ReadonlySet<string>
     {
+        if (this.membership !== undefined && !this.membership.IsActive(principal))
+        {
+            return new Set<string>();
+        }
         const teams = this.membership?.Resolve(principal).teams ?? [];
         const out = new Set<string>();
         for (const assignment of this.assignments)

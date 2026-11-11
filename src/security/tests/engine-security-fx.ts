@@ -118,7 +118,7 @@ export class EngineSecurityFx
             ],
             roleAssignments: [
                 { role: BaseRole.BasicUser, principalIds: ["sam", "erin"], teamIds: [] },
-                { role: EngineSecurityFx.ProjectManager, principalIds: [], teamIds: ["managers", "mkt"] },
+                { role: EngineSecurityFx.ProjectManager, principalIds: ["sam"], teamIds: ["managers", "mkt"] },
             ],
             profileAssignments: [{ profile: EngineSecurityFx.Compensation, principalIds: [], teamIds: ["hr"] }],
             roleOverrides: [],
@@ -126,10 +126,10 @@ export class EngineSecurityFx
         };
     }
 
-    public static Directory(bobState: IdpUserState = IdpUserState.Enabled): IdpDirectorySnapshot
+    public static Directory(bobState: IdpUserState = IdpUserState.Enabled, danaState: IdpUserState = IdpUserState.Enabled): IdpDirectorySnapshot
     {
         const users = new Map<string, IdpUserState>([
-            ["sam", IdpUserState.Enabled], ["erin", IdpUserState.Enabled], ["bob", bobState], ["dana", IdpUserState.Enabled],
+            ["sam", IdpUserState.Enabled], ["erin", IdpUserState.Enabled], ["bob", bobState], ["dana", danaState],
         ]);
         const groups = new Map<string, readonly string[]>([["hr-staff", []], ["managers", ["bob"]]]);
         return new IdpDirectorySnapshot(new Date(0), true, users, groups);

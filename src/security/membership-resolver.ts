@@ -1,4 +1,4 @@
-import { SystemPrincipal, type BusinessUnitHierarchy, type ISecurityModelConfig, type Principal, type TeamMembershipRows } from "@pragmatic-tech-ai/todl-identity";
+import { SystemPrincipal, type BusinessUnitHierarchy, type IdpDirectorySnapshot, type ISecurityModelConfig, type Principal, type TeamMembershipRows } from "@pragmatic-tech-ai/todl-identity";
 
 export interface IMembership
 {
@@ -14,7 +14,8 @@ export class MembershipResolver
     public constructor(
         config: ISecurityModelConfig,
         private readonly hierarchy: BusinessUnitHierarchy,
-        private readonly rows: TeamMembershipRows)
+        private readonly rows: TeamMembershipRows,
+        private readonly directory: IdpDirectorySnapshot)
     {
         this.placements = new Map<string, string>(config.users.map(u => [u.principalId, u.businessUnitId]));
     }
@@ -22,6 +23,12 @@ export class MembershipResolver
     public Resolve(principal: Principal): IMembership
     {
         return { homeBusinessUnit: this.HomeOf(principal), teams: this.rows.TeamsOf(principal) };
+    }
+
+    /** False when the IdP records the user as disabled or deleted. */
+    public IsActive(principal: Principal): boolean
+    {
+        return this.directory.IsActive(principal);
     }
 
     /** The system principal, and a principal without a placement, sit at the root (C7). */

@@ -8,9 +8,9 @@ test("membership is the placement home unit plus active team rows", () =>
 {
     const config = EngineSecurityFx.Config();
     const hierarchy = BusinessUnitHierarchy.FromConfig(config.businessUnits);
-    const active = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, EngineSecurityFx.Directory()));
+    const active = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, EngineSecurityFx.Directory()), EngineSecurityFx.Directory());
     assert.deepEqual(active.Resolve(EngineSecurityFx.User("bob")), { homeBusinessUnit: "marketing", teams: ["managers"] });
     assert.deepEqual(active.Resolve(EngineSecurityFx.User("unplaced")), { homeBusinessUnit: "contoso", teams: [] });
-    const disabled = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, EngineSecurityFx.Directory(IdpUserState.Disabled)));
+    const disabled = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, EngineSecurityFx.Directory(IdpUserState.Disabled)), EngineSecurityFx.Directory(IdpUserState.Disabled));
     assert.deepEqual(disabled.Resolve(EngineSecurityFx.User("bob")), { homeBusinessUnit: "marketing", teams: [] });
 });

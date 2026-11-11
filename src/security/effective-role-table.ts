@@ -19,6 +19,8 @@ export class EffectiveRoleTable
         AccessLevel.Organization,
     ];
 
+    private static readonly BaseRoles: ReadonlySet<string> = new Set<string>(Object.values(BaseRole));
+
     private static readonly KeySeparator = "\u0000";
     private static readonly SubjectSeparator = "/";
     private static readonly UnknownRoleMessage = "role override names a role no deployed package or the platform defines: ";
@@ -38,7 +40,7 @@ export class EffectiveRoleTable
     public static Build(security: IEnvironmentSecurity, overrides: readonly IRoleOverrideConfig[], concepts: ReadonlySet<string>): EffectiveRoleTable
     {
         const roles = new Map<string, Map<string, AccessLevel>>();
-        for (const role of Object.values(BaseRole))
+        for (const role of EffectiveRoleTable.BaseRoles)
         {
             roles.set(role, new Map<string, AccessLevel>());
         }
@@ -47,14 +49,17 @@ export class EffectiveRoleTable
         {
             for (const role of security.Packages.get(id)?.Roles ?? [])
             {
-                EffectiveRoleTable.Merge(roles, role, true);
+                EffectiveRoleTable.Merge(roles, role);
             }
         }
         for (const id of packages)
         {
             for (const contribution of security.Packages.get(id)?.BaseRoleContributions ?? [])
             {
-                EffectiveRoleTable.Merge(roles, contribution, false);
+                if (EffectiveRoleTable.BaseRoles.has(contribution.Name))
+                {
+                    EffectiveRoleTable.Merge(roles, contribution);
+                }
             }
         }
         const table = new EffectiveRoleTable(roles);
@@ -84,16 +89,12 @@ export class EffectiveRoleTable
         return this.diagnostics;
     }
 
-    // A package role is created by its definition; a contribution only adds to a base role that already exists.
-    private static Merge(roles: Map<string, Map<string, AccessLevel>>, role: IPackageRole, create: boolean): void
+    // Adds a package role or a base-role contribution; contributions reach only base roles (Build checks the name).
+    private static Merge(roles: Map<string, Map<string, AccessLevel>>, role: IPackageRole): void
     {
         let levels = roles.get(role.Name);
         if (levels === undefined)
         {
-            if (!create)
-            {
-                return;
-            }
             levels = new Map<string, AccessLevel>();
             roles.set(role.Name, levels);
         }

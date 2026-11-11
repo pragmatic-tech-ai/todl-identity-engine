@@ -118,9 +118,13 @@ export class AccessDepthEvaluator
         {
             sources.push(new RoleSource(direct, this.model.PlacementOf(principal).HomeBusinessUnitId, undefined));
         }
-        const root = this.model.Hierarchy().RootId();
         for (const team of [...this.MembershipOf(principal).teams].sort())
         {
+            const unit = this.model.TeamBusinessUnit(team);
+            if (unit === undefined)
+            {
+                continue;
+            }
             const roles = new Set<string>();
             for (const assignment of this.assignments)
             {
@@ -131,7 +135,7 @@ export class AccessDepthEvaluator
             }
             if (roles.size > 0)
             {
-                sources.push(new RoleSource(roles, this.model.TeamBusinessUnit(team) ?? root, team));
+                sources.push(new RoleSource(roles, unit, team));
             }
         }
         return sources;
@@ -176,8 +180,9 @@ export class AccessDepthEvaluator
     }
 
     /**
-     * The system-field writes of assigning a record to an owner. An explicit `owningBu` wins; otherwise a team owner gets
-     * its team's unit, a user owner its placement, and the system principal the root.
+     * The system-field writes of assigning a record to an owner (spec §4.4). The unit is derived first: a team owner gets
+     * its team's unit, the system principal the root, a placed user its placement; a contradicting `owningBu` is ignored.
+     * Only an unplaced user takes the explicit `owningBu`, which must exist; with neither it is OwningBusinessUnitRequired.
      */
     public AssignWrites(concept: string, ownerId: string, ownerIsTeam: boolean, owningBu: string | undefined): IAssignComputation
     {
@@ -190,22 +195,18 @@ export class AccessDepthEvaluator
         {
             return { outcome: AssignOutcome.UnknownTeam, writes: [] };
         }
-        let bu: string | undefined;
-        if (owningBu !== undefined)
+        let bu = ownerIsTeam ? teamUnit : this.UserUnitOf(ownerId);
+        if (bu === undefined)
         {
+            if (owningBu === undefined)
+            {
+                return { outcome: AssignOutcome.OwningBusinessUnitRequired, writes: [] };
+            }
             if (!this.model.Hierarchy().Has(owningBu))
             {
                 return { outcome: AssignOutcome.UnknownBusinessUnit, writes: [] };
             }
             bu = owningBu;
-        }
-        else
-        {
-            bu = ownerIsTeam ? teamUnit : this.UserUnitOf(ownerId);
-        }
-        if (bu === undefined)
-        {
-            return { outcome: AssignOutcome.OwningBusinessUnitRequired, writes: [] };
         }
         return {
             outcome: AssignOutcome.Writes,
