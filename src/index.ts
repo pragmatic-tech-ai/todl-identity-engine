@@ -9,3 +9,7 @@ export type { IPrincipalPlacement } from "./security/tenant-security-model.js";
 export { FieldSecurityEvaluator } from "./security/field-security-evaluator.js";
 export { AccessDepthEvaluator, AssignOutcome, RoleSource } from "./security/access-depth-evaluator.js";
 export type { IAssignComputation } from "./security/access-depth-evaluator.js";
+export { Tier1Catalog } from "./scope/tier1-catalog.js";
+export type { ITier1Catalog } from "./scope/tier1-catalog.js";
+export { Tier1Grants } from "./scope/tier1-grants.js";
+export { Tier1ScopeCompiler } from "./scope/tier1-scope-compiler.js";
