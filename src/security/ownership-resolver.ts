@@ -1,7 +1,7 @@
 import type { IInstanceView } from "@pragmatic-tech-ai/todl";
 import { OwnershipSourceKind } from "@pragmatic-tech-ai/todl-identity";
 import type { IOwnershipRuleConfig, IOwnershipSource } from "@pragmatic-tech-ai/todl-identity";
-import type { BusinessUnitHierarchy } from "./business-unit-hierarchy.js";
+import type { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 
 export interface IOwnership
 {

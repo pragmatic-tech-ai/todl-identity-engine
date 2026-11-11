@@ -1,24 +1,24 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-// Baseline resolution guard: both core packages must resolve from their root
-// barrels (compiled dist). This pins the bridge's two file: dependencies and the
-// transitive todl-runtime registry dependency. The bridge sources import nothing from
-// deep subpaths of todl; todl-runtime is only a test-only devDependency, used via its
-// root barrel by the connector integration test.
-import { MetaKind, PolicyPredicateCodec, Repository } from "@pragmatic-tech-ai/todl";
-import { ResourceAuthorizationPolicy, Action, Principal } from "@pragmatic-tech-ai/todl-identity";
+// Resolution guard: the three sibling packages must resolve from compiled dist, and
+// the graph package is the same module instance TODL links (one Predicate class).
+import { AccessScope, Predicate } from "@pragmatic-tech-ai/graph";
+import { ShareGrantScope } from "@pragmatic-tech-ai/todl/engine";
+import { BaseRole } from "@pragmatic-tech-ai/todl-identity";
 
-test("todl root barrel resolves the policy + model surface the bridge needs", () =>
+test("graph resolves AccessScope and Predicate", () =>
 {
-    assert.equal(MetaKind.Policy, "policy");
-    assert.equal(typeof PolicyPredicateCodec.FromJson, "function");
-    assert.equal(typeof Repository, "function");
+    assert.equal(typeof AccessScope, "function");
+    assert.equal(typeof Predicate, "function");
 });
 
-test("todl-identity root barrel resolves the authorization surface the bridge needs", () =>
+test("todl engine subpath resolves ShareGrantScope", () =>
 {
-    assert.equal(typeof ResourceAuthorizationPolicy, "function");
-    assert.equal(Action.Read, 0);
-    assert.equal(typeof Principal, "function");
+    assert.ok(ShareGrantScope !== undefined);
+});
+
+test("todl-identity resolves BaseRole", () =>
+{
+    assert.ok(Object.values(BaseRole).length > 0);
 });

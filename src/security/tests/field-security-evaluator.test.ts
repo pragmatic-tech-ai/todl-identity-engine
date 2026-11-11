@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Principal, PrincipalKind, PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
 import type { IFieldSecurityConfig, IMembershipConfig } from "@pragmatic-tech-ai/todl-identity";
 import { TenantSecurityModel } from "../tenant-security-model.js";
-import { BusinessUnitHierarchy } from "../business-unit-hierarchy.js";
+import { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 import { MembershipResolver } from "../membership-resolver.js";
 import { FieldSecurityEvaluator, MalformedFieldSecurityError } from "../field-security-evaluator.js";
 

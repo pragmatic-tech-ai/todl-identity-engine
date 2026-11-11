@@ -1,6 +1,6 @@
 import { OwnershipSourceKind } from "@pragmatic-tech-ai/todl-identity";
 import type { ISecurityModelConfig, IOwnershipRuleConfig, IOwnershipSource, ITeamConfig, IMembershipConfig } from "@pragmatic-tech-ai/todl-identity";
-import { BusinessUnitHierarchy } from "./business-unit-hierarchy.js";
+import { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 import { MembershipResolver } from "./membership-resolver.js";
 import { OwnershipResolver } from "./ownership-resolver.js";
 import { FieldSecurityEvaluator } from "./field-security-evaluator.js";

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Principal, PrincipalKind } from "@pragmatic-tech-ai/todl-identity";
 import type { IMembershipConfig } from "@pragmatic-tech-ai/todl-identity";
-import { BusinessUnitHierarchy } from "../business-unit-hierarchy.js";
+import { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 import { MembershipResolver } from "../membership-resolver.js";
 
 class Fixture

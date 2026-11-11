@@ -1,5 +1,5 @@
 import type { IMembershipConfig, IMembershipClaimRule, IMembershipOverride, Principal } from "@pragmatic-tech-ai/todl-identity";
-import type { BusinessUnitHierarchy } from "./business-unit-hierarchy.js";
+import type { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 
 export interface IMembership
 {

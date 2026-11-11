@@ -1,13 +1,5 @@
 // Public barrel for @pragmatic-tech-ai/todl-identity-engine.
-export { PolicyCatalog, PolicyEffect, PolicyActionKind } from "./policy/policy-catalog.js";
-export type { PolicyRule } from "./policy/policy-catalog.js";
-export { PolicyPredicateCompiler } from "./policy/policy-predicate-compiler.js";
-export { FusionAccessPolicy } from "./authz/fusion-access-policy.js";
-export { PolicyAccessInstanceFilter } from "./adapters/policy-instance-filter.js";
-export { PolicyPushDown } from "./adapters/policy-push-down.js";
-export { PolicyQueryFilterProvider } from "./adapters/policy-query-filter-provider.js";
-export { IdentityEnforcement } from "./enforcement/identity-enforcement.js";
-export { BusinessUnitHierarchy, MalformedBusinessUnitTreeError } from "./security/business-unit-hierarchy.js";
+export { SecurityVocabulary } from "./security/security-vocabulary.js";
 export { MembershipResolver } from "./security/membership-resolver.js";
 export type { IMembership } from "./security/membership-resolver.js";
 export { OwnershipResolver } from "./security/ownership-resolver.js";
@@ -17,7 +9,3 @@ export { FieldSecurityEvaluator, MalformedFieldSecurityError } from "./security/
 export { AccessDepthEvaluator, MalformedRolesError } from "./security/access-depth-evaluator.js";
 export { AssignOutcome } from "./security/access-depth-evaluator.js";
 export type { IAssignComputation } from "./security/access-depth-evaluator.js";
-export { AccessDepthInstanceFilter } from "./security/access-depth-instance-filter.js";
-export { ConceptBypassInstanceFilter } from "./security/concept-bypass-instance-filter.js";
-export { CompositeInstanceFilter } from "./security/composite-instance-filter.js";
-export { AllowAllInstanceFilter } from "./security/allow-all-instance-filter.js";

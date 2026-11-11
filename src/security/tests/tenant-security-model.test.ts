@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Principal, PrincipalKind, OwnershipSourceKind } from "@pragmatic-tech-ai/todl-identity";
 import type { ISecurityModelConfig } from "@pragmatic-tech-ai/todl-identity";
 import { TenantSecurityModel, MalformedSecurityModelError } from "../tenant-security-model.js";
-import { MalformedBusinessUnitTreeError } from "../business-unit-hierarchy.js";
+import { MalformedBusinessUnitTreeError } from "@pragmatic-tech-ai/todl-identity";
 
 class Fixture
 {

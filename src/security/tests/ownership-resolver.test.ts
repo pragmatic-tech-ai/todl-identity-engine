@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { IInstanceView } from "@pragmatic-tech-ai/todl";
 import { OwnershipSourceKind } from "@pragmatic-tech-ai/todl-identity";
 import type { IOwnershipRuleConfig } from "@pragmatic-tech-ai/todl-identity";
-import { BusinessUnitHierarchy } from "../business-unit-hierarchy.js";
+import { BusinessUnitHierarchy } from "@pragmatic-tech-ai/todl-identity";
 import { OwnershipResolver } from "../ownership-resolver.js";
 
 class Fixture

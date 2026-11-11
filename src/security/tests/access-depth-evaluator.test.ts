@@ -4,7 +4,7 @@ import { Principal, PrincipalKind, PrivilegeAction, AccessLevel, OwnershipSource
 import type { ISecurityModelConfig } from "@pragmatic-tech-ai/todl-identity";
 import type { IInstanceView } from "@pragmatic-tech-ai/todl";
 import { AccessDepthEvaluator, MalformedRolesError } from "../access-depth-evaluator.js";
-import { MalformedBusinessUnitTreeError } from "../business-unit-hierarchy.js";
+import { MalformedBusinessUnitTreeError } from "@pragmatic-tech-ai/todl-identity";
 
 const Order = "shop.Order";
 
