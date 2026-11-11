@@ -15,7 +15,7 @@ test("graph resolves AccessScope and Predicate", () =>
 
 test("todl engine subpath resolves ShareGrantScope", () =>
 {
-    assert.ok(ShareGrantScope !== undefined);
+    assert.equal(typeof ShareGrantScope, "function");
 });
 
 test("todl-identity resolves BaseRole", () =>
