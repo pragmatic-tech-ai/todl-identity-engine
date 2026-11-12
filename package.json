@@ -35,7 +35,7 @@
     "@pragmatic-tech-ai/todl-runtime": "^0.7.0"
   },
   "dependencies": {
-    "@pragmatic-tech-ai/graph": "^0.4.0",
+    "@pragmatic-tech-ai/graph": "^0.5.0",
     "@pragmatic-tech-ai/todl": "file:../TODL",
     "@pragmatic-tech-ai/todl-identity": "file:../todl-identity"
   }
