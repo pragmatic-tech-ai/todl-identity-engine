@@ -2,7 +2,7 @@ import { AccessDefault, AccessScope, Predicate, type IEndpointMembers, type IRea
 import { ShareGrantScope, ShareRight, SystemNames, TodlNames, type IEnvironmentSecurity, type IShareSubjects } from "@pragmatic-tech-ai/todl/engine";
 import { AccessLevel, PrivilegeAction, type Principal } from "@pragmatic-tech-ai/todl-identity";
 import { AccessDepthEvaluator } from "../security/access-depth-evaluator.js";
-import type { TenantSecurityModel } from "../security/tenant-security-model.js";
+import type { RealmSecurityModel } from "../security/realm-security-model.js";
 import type { Tier1Diagnostic } from "../security/tier1-diagnostic.js";
 import { Tier1Catalog, type ITier1Catalog } from "./tier1-catalog.js";
 import { Tier1Depth, Tier1Grants, Tier1Predicates } from "./tier1-grants.js";
@@ -30,34 +30,34 @@ export class Tier1ScopeCompiler
     private static readonly SystemFields: ReadonlySet<string> = new Set<string>([SystemNames.Owner, SystemNames.OwningBusinessUnit]);
 
     /** The scope a principal reads and writes under (rules 1-6). */
-    public static Compile(principal: Principal, security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): AccessScope
+    public static Compile(principal: Principal, security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog): AccessScope
     {
         return Tier1ScopeCompiler.Build(principal, security, model, catalog, false);
     }
 
     /** The scope assign runs under (rule 7, PR2): Update gated by the assign depth, the system fields writable. */
-    public static CompileAssign(principal: Principal, security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): AccessScope
+    public static CompileAssign(principal: Principal, security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog): AccessScope
     {
         return Tier1ScopeCompiler.Build(principal, security, model, catalog, true);
     }
 
-    public static Grants(principal: Principal, security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): Tier1Grants
+    public static Grants(principal: Principal, security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog): Tier1Grants
     {
         return Tier1Grants.For(Tier1Depth.For(Tier1ScopeCompiler.Evaluator(security, model, catalog), principal));
     }
 
     /** Every dropped or reinterpreted entry of the environment setting against the deployed packages. */
-    public static Diagnose(security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): readonly Tier1Diagnostic[]
+    public static Diagnose(security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog): readonly Tier1Diagnostic[]
     {
         return Tier1ScopeCompiler.Evaluator(security, model, catalog).Diagnostics();
     }
 
-    private static Evaluator(security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog): AccessDepthEvaluator
+    private static Evaluator(security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog): AccessDepthEvaluator
     {
         return AccessDepthEvaluator.For(security, model, Tier1Catalog.EngineStoredConcepts(catalog));
     }
 
-    private static Build(principal: Principal, security: IEnvironmentSecurity, model: TenantSecurityModel, catalog: ITier1Catalog, assign: boolean): AccessScope
+    private static Build(principal: Principal, security: IEnvironmentSecurity, model: RealmSecurityModel, catalog: ITier1Catalog, assign: boolean): AccessScope
     {
         if (!model.IsActive(principal))
         {

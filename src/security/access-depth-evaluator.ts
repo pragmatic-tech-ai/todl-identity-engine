@@ -3,7 +3,7 @@ import { AccessLevel, BaseRole, SystemPrincipal, type IRoleAssignmentConfig, typ
 import { EffectiveRoleTable } from "./effective-role-table.js";
 import { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 import type { IMembership } from "./membership-resolver.js";
-import { TenantSecurityModel } from "./tenant-security-model.js";
+import { RealmSecurityModel } from "./realm-security-model.js";
 import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
 
 export enum AssignOutcome
@@ -43,7 +43,7 @@ export class AccessDepthEvaluator
 
     private constructor(
         private readonly security: IEnvironmentSecurity,
-        private readonly model: TenantSecurityModel,
+        private readonly model: RealmSecurityModel,
         private readonly table: EffectiveRoleTable,
         private readonly assignments: readonly IRoleAssignmentConfig[],
         private readonly fieldSecurity: FieldSecurityEvaluator,
@@ -52,7 +52,7 @@ export class AccessDepthEvaluator
     }
 
     /** `concepts` are the environment's engine-stored concepts; its edge concepts are left out of the role table. */
-    public static For(security: IEnvironmentSecurity, model: TenantSecurityModel, concepts: ReadonlySet<string>): AccessDepthEvaluator
+    public static For(security: IEnvironmentSecurity, model: RealmSecurityModel, concepts: ReadonlySet<string>): AccessDepthEvaluator
     {
         const config = model.Config();
         const edges = new Set<string>(security.EdgeConcepts.map(e => e.Concept));
@@ -99,7 +99,7 @@ export class AccessDepthEvaluator
     public static DenyAll(): AccessDepthEvaluator
     {
         const security: IEnvironmentSecurity = { Packages: new Map(), EdgeConcepts: [], OwnedConcepts: () => new Set<string>() };
-        return AccessDepthEvaluator.For(security, TenantSecurityModel.Empty(), new Set<string>());
+        return AccessDepthEvaluator.For(security, RealmSecurityModel.Empty(), new Set<string>());
     }
 
     public EffectiveRoles(principal: Principal): ReadonlySet<string>
@@ -235,7 +235,7 @@ export class AccessDepthEvaluator
         };
     }
 
-    public Model(): TenantSecurityModel
+    public Model(): RealmSecurityModel
     {
         return this.model;
     }

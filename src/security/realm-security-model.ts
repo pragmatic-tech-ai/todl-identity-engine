@@ -9,7 +9,7 @@ export interface IPrincipalPlacement
 }
 
 /** An environment's organisation facts: the validated C5 setting, its business-unit tree, the IdP directory and team membership. */
-export class TenantSecurityModel
+export class RealmSecurityModel
 {
     public static readonly DefaultRootBusinessUnitId = "root";
 
@@ -27,19 +27,19 @@ export class TenantSecurityModel
     }
 
     /** Throws InvalidSecurityModelError when the setting is not valid. */
-    public static FromConfig(config: ISecurityModelConfig, directory: IdpDirectorySnapshot): TenantSecurityModel
+    public static FromConfig(config: ISecurityModelConfig, directory: IdpDirectorySnapshot): RealmSecurityModel
     {
         SecurityModelValidator.AssertValid(config);
         const hierarchy = BusinessUnitHierarchy.FromConfig(config.businessUnits);
         const membership = new MembershipResolver(config, hierarchy, TeamMembershipRows.For(config, directory), directory);
-        return new TenantSecurityModel(config, hierarchy, directory, membership);
+        return new RealmSecurityModel(config, hierarchy, directory, membership);
     }
 
     /** A root-only tree, nobody placed, no teams, on a non-authoritative directory. */
-    public static Empty(): TenantSecurityModel
+    public static Empty(): RealmSecurityModel
     {
         const config: ISecurityModelConfig = {
-            businessUnits: [{ id: TenantSecurityModel.DefaultRootBusinessUnitId, name: TenantSecurityModel.DefaultRootName }],
+            businessUnits: [{ id: RealmSecurityModel.DefaultRootBusinessUnitId, name: RealmSecurityModel.DefaultRootName }],
             users: [],
             teams: [],
             roleAssignments: [],
@@ -47,7 +47,7 @@ export class TenantSecurityModel
             roleOverrides: [],
             profileOverrides: [],
         };
-        return TenantSecurityModel.FromConfig(config, IdpDirectorySnapshot.NonAuthoritative(new Date(0)));
+        return RealmSecurityModel.FromConfig(config, IdpDirectorySnapshot.NonAuthoritative(new Date(0)));
     }
 
     public Config(): ISecurityModelConfig

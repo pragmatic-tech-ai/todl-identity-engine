@@ -5,7 +5,7 @@ import { BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind,
 /** The `hr` (spec §9.1) and `projects` (spec §9.2) environment, as plain C2/C5 object literals. */
 export class EngineSecurityFx
 {
-    public static readonly Tenant = "env";
+    public static readonly Realm = "env";
     public static readonly Employee = "hr.Employee";
     public static readonly Department = "hr.Department";
     public static readonly Project = "projects.Project";
@@ -137,6 +137,6 @@ export class EngineSecurityFx
 
     public static User(id: string): Principal
     {
-        return new Principal(id, EngineSecurityFx.Tenant, PrincipalKind.User, new Map<string, string>(), []);
+        return new Principal(id, EngineSecurityFx.Realm, PrincipalKind.User, new Map<string, string>(), []);
     }
 }

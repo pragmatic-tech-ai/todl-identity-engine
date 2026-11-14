@@ -4,8 +4,8 @@ export { Tier1Diagnostic, Tier1DiagnosticCode } from "./security/tier1-diagnosti
 export { EffectiveRoleTable } from "./security/effective-role-table.js";
 export { MembershipResolver } from "./security/membership-resolver.js";
 export type { IMembership } from "./security/membership-resolver.js";
-export { TenantSecurityModel } from "./security/tenant-security-model.js";
-export type { IPrincipalPlacement } from "./security/tenant-security-model.js";
+export { RealmSecurityModel } from "./security/realm-security-model.js";
+export type { IPrincipalPlacement } from "./security/realm-security-model.js";
 export { FieldSecurityEvaluator } from "./security/field-security-evaluator.js";
 export { AccessDepthEvaluator, AssignOutcome, RoleSource } from "./security/access-depth-evaluator.js";
 export type { IAssignComputation } from "./security/access-depth-evaluator.js";

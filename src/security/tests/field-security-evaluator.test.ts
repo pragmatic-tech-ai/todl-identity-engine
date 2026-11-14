@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { IdpUserState, PrivilegeAction, type ISecurityModelConfig, type IdpDirectorySnapshot } from "@pragmatic-tech-ai/todl-identity";
-import { FieldSecurityEvaluator, TenantSecurityModel } from "../../index.js";
+import { FieldSecurityEvaluator, RealmSecurityModel } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";
 
 class Fx
 {
     public static Evaluator(config: ISecurityModelConfig, directory: IdpDirectorySnapshot = EngineSecurityFx.Directory()): FieldSecurityEvaluator
     {
-        const model = TenantSecurityModel.FromConfig(config, directory);
+        const model = RealmSecurityModel.FromConfig(config, directory);
         return FieldSecurityEvaluator.For(EngineSecurityFx.Security(), config.profileAssignments, config.profileOverrides, model.Membership());
     }
 }

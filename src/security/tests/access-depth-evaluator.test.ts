@@ -1,14 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { AccessLevel, BaseRole, IdpUserState, PrivilegeAction, SystemPrincipal } from "@pragmatic-tech-ai/todl-identity";
-import { AccessDepthEvaluator, RoleSource, TenantSecurityModel } from "../../index.js";
+import { AccessDepthEvaluator, RoleSource, RealmSecurityModel } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";
 
 class Fx
 {
     public static Evaluator(bobState: IdpUserState = IdpUserState.Enabled): AccessDepthEvaluator
     {
-        const model = TenantSecurityModel.FromConfig(EngineSecurityFx.Config(), EngineSecurityFx.Directory(bobState));
+        const model = RealmSecurityModel.FromConfig(EngineSecurityFx.Config(), EngineSecurityFx.Directory(bobState));
         return AccessDepthEvaluator.For(EngineSecurityFx.Security(), model, EngineSecurityFx.StoredConcepts());
     }
 }
@@ -34,7 +34,7 @@ test("role sources keep each team's unit", () =>
 test("system principal is System Administrator and sits at the root", () =>
 {
     const evaluator = Fx.Evaluator();
-    const system = SystemPrincipal.For(EngineSecurityFx.Tenant);
+    const system = SystemPrincipal.For(EngineSecurityFx.Realm);
     assert.equal(evaluator.IsSystemAdministrator(system), true);
     assert.equal(evaluator.Model().PlacementOf(system).HomeBusinessUnitId, evaluator.Model().Hierarchy().RootId());
 });

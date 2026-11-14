@@ -11,7 +11,7 @@ Surface:
   `SecurityDepth` to identity's `PrivilegeAction` / `AccessLevel`; an unmapped
   value throws.
 - Tier-1 security evaluation over the environment's package security (S1
-  `IEnvironmentSecurity`) and its C5 setting: `TenantSecurityModel`,
+  `IEnvironmentSecurity`) and its C5 setting: `RealmSecurityModel`,
   `MembershipResolver`, `EffectiveRoleTable`, `AccessDepthEvaluator` and
   `FieldSecurityEvaluator`; dropped setting entries surface as `Tier1Diagnostic`.
 - `Tier1ScopeCompiler` (contract C6): one principal's package security and

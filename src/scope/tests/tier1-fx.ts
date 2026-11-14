@@ -5,7 +5,7 @@ import {
     AccessLevel, BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind, PrivilegeAction,
     type IProfileAssignmentConfig, type IRoleOverrideConfig, type ISecurityModelConfig,
 } from "@pragmatic-tech-ai/todl-identity";
-import { TenantSecurityModel, type ITier1Catalog } from "../../index.js";
+import { RealmSecurityModel, type ITier1Catalog } from "../../index.js";
 
 /** Options for one Tier1Fx environment setting. */
 export interface ITier1FxOptions
@@ -23,7 +23,7 @@ export interface ITier1FxOptions
  */
 export class Tier1Fx
 {
-    public static readonly Tenant = "env";
+    public static readonly Realm = "env";
     public static readonly Version = "tier1-fx";
     public static readonly Employee = "hr.Employee";
     public static readonly Contractor = "contractors.Contractor";
@@ -115,9 +115,9 @@ export class Tier1Fx
         return { Packages: packages, EdgeConcepts: edges, OwnedConcepts: () => owned };
     }
 
-    public static Model(options: ITier1FxOptions = {}): TenantSecurityModel
+    public static Model(options: ITier1FxOptions = {}): RealmSecurityModel
     {
-        return TenantSecurityModel.FromConfig(Tier1Fx.Config(options), Tier1Fx.Directory());
+        return RealmSecurityModel.FromConfig(Tier1Fx.Config(options), Tier1Fx.Directory());
     }
 
     public static Config(options: ITier1FxOptions = {}): ISecurityModelConfig
@@ -170,7 +170,7 @@ export class Tier1Fx
 
     public static User(id: string): Principal
     {
-        return new Principal(id, Tier1Fx.Tenant, PrincipalKind.User, new Map<string, string>(), []);
+        return new Principal(id, Tier1Fx.Realm, PrincipalKind.User, new Map<string, string>(), []);
     }
 
     private static Hr(): IPackageSecurity

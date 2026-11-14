@@ -5,7 +5,7 @@ import { FakeStorage } from "@pragmatic-tech-ai/todl-runtime";
 import { compilePackage, StoragePackageSource } from "@pragmatic-tech-ai/todl";
 import { DeliveryChannel, EnvironmentCatalogComposer, type IEnvironmentCatalog } from "@pragmatic-tech-ai/todl/engine";
 import { BaseRole, type ISecurityModelConfig } from "@pragmatic-tech-ai/todl-identity";
-import { TenantSecurityModel, Tier1Catalog, Tier1ScopeCompiler } from "../../index.js";
+import { RealmSecurityModel, Tier1Catalog, Tier1ScopeCompiler } from "../../index.js";
 import { Tier1Fx } from "./tier1-fx.js";
 
 /** A real composed environment catalog: `shop.Order` engine-stored (the catalog's default), `shop.Customer` populated from an external sql datasource. */
@@ -59,7 +59,7 @@ test("a composed catalog's engine-storage default governs engine-stored concepts
     assert.equal(stored.has(ComposedFx.Order), true);
     assert.equal(stored.has(ComposedFx.Customer), false);
 
-    const model = TenantSecurityModel.FromConfig(ComposedFx.Config(), Tier1Fx.Directory());
+    const model = RealmSecurityModel.FromConfig(ComposedFx.Config(), Tier1Fx.Directory());
     const scope = Tier1ScopeCompiler.Compile(Tier1Fx.User(Tier1Fx.Sam), catalog.Security, model, catalog);
     assert.equal(scope.Rows.has(ComposedFx.Order), true);
     assert.equal(scope.Writes.has(ComposedFx.Order), true);
