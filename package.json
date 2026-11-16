@@ -1,6 +1,10 @@
 {
   "name": "@pragmatic-tech-ai/todl-identity-engine",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pragmatic-tech-ai/todl-identity-engine.git"
+  },
   "license": "Apache-2.0",
   "description": "Bridge engine binding the TODL security model to the todl-identity authorization model: security vocabulary mapping and tier-1 access-depth, membership and field-security evaluation.",
   "type": "module",
@@ -36,7 +40,7 @@
   },
   "dependencies": {
     "@pragmatic-tech-ai/graph": "^0.6.0",
-    "@pragmatic-tech-ai/todl": "file:../TODL",
-    "@pragmatic-tech-ai/todl-identity": "file:../todl-identity"
+    "@pragmatic-tech-ai/todl": "^0.66.1",
+    "@pragmatic-tech-ai/todl-identity": "^0.1.0"
   }
 }
