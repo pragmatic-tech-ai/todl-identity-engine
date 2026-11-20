@@ -5,6 +5,9 @@ The bridge engine that binds the TODL security model to the
 packages (`todl`, `pragmatic-identity`) and `pragmatic-graph`, so that neither core package has to
 depend on the other.
 
+Formerly published as `@pragmatic-tech-ai/todl-identity-engine` (0.1.0); that name is retired. GitHub Packages does
+not support `npm deprecate`, so the old version carries no deprecation flag.
+
 Surface:
 
 - `SecurityVocabulary`: exhaustive value maps from TODL's `SecurityAction` /
