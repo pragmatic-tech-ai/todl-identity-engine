@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { SecurityAction, SecurityDepth, BaseRoleName } from "@pragmatic-tech-ai/todl";
-import { PrivilegeAction, AccessLevel, BaseRole } from "@pragmatic-tech-ai/todl-identity";
+import { PrivilegeAction, AccessLevel, BaseRole } from "@pragmatic-tech-ai/pragmatic-identity";
 import { SecurityVocabulary } from "../security-vocabulary.js";
 
 test("every SecurityAction maps to the PrivilegeAction with the same value and back", () =>

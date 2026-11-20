@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AccessLevel, BaseRole, IdpUserState, PrivilegeAction, SystemPrincipal } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, BaseRole, IdpUserState, PrivilegeAction, SystemPrincipal } from "@pragmatic-tech-ai/pragmatic-identity";
 import { AccessDepthEvaluator, RoleSource, RealmSecurityModel } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";
 

@@ -1,5 +1,5 @@
 import type { IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
-import { PrivilegeAction, type IProfileAssignmentConfig, type IProfileOverrideConfig, type Principal } from "@pragmatic-tech-ai/todl-identity";
+import { PrivilegeAction, type IProfileAssignmentConfig, type IProfileOverrideConfig, type Principal } from "@pragmatic-tech-ai/pragmatic-identity";
 import type { MembershipResolver } from "./membership-resolver.js";
 import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
 

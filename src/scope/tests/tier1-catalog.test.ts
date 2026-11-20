@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BindingTable } from "@pragmatic-tech-ai/graph";
+import { BindingTable } from "@pragmatic-tech-ai/pragmatic-graph";
 import { FakeStorage } from "@pragmatic-tech-ai/todl-runtime";
 import { compilePackage, StoragePackageSource } from "@pragmatic-tech-ai/todl";
 import { DeliveryChannel, EnvironmentCatalogComposer, type IEnvironmentCatalog } from "@pragmatic-tech-ai/todl/engine";
-import { BaseRole, type ISecurityModelConfig } from "@pragmatic-tech-ai/todl-identity";
+import { BaseRole, type ISecurityModelConfig } from "@pragmatic-tech-ai/pragmatic-identity";
 import { RealmSecurityModel, Tier1Catalog, Tier1ScopeCompiler } from "../../index.js";
 import { Tier1Fx } from "./tier1-fx.js";
 

@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
-import { Compare, CompareOp, ConceptIs, In, Not, Or, Predicate, PredicateKind } from "@pragmatic-tech-ai/graph";
+import { Compare, CompareOp, ConceptIs, In, Not, Or, Predicate, PredicateKind } from "@pragmatic-tech-ai/pragmatic-graph";
 import { SystemNames } from "@pragmatic-tech-ai/todl/engine";
-import { AccessLevel, type Principal, type PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, type Principal, type PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import type { AccessDepthEvaluator } from "../security/access-depth-evaluator.js";
 
 /** Predicate composition of the tier-1 compile rules (spec C6, program ruling R4): one flat Or, and the own-concept guard. */

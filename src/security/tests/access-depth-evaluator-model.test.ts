@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AccessLevel, PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import { AccessDepthEvaluator } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";
 

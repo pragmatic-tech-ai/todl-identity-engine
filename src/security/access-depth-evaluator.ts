@@ -1,5 +1,5 @@
 import { SystemNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
-import { AccessLevel, BaseRole, SystemPrincipal, type IRoleAssignmentConfig, type Principal, type PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, BaseRole, SystemPrincipal, type IRoleAssignmentConfig, type Principal, type PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import { EffectiveRoleTable } from "./effective-role-table.js";
 import { FieldSecurityEvaluator } from "./field-security-evaluator.js";
 import type { IMembership } from "./membership-resolver.js";

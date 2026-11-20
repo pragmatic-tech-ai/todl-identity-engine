@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AccessScope, Cypher, GraphEngine, StorageKind, type GraphTransaction } from "@pragmatic-tech-ai/graph";
+import { AccessScope, Cypher, GraphEngine, StorageKind, type GraphTransaction } from "@pragmatic-tech-ai/pragmatic-graph";
 import { OwnershipAssignment, ShareRight, ShareSubject, SystemNames } from "@pragmatic-tech-ai/todl/engine";
 import { Tier1ScopeCompiler } from "../../index.js";
 import { Tier1Fx, type ITier1FxOptions } from "./tier1-fx.js";

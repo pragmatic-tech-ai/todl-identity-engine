@@ -1,6 +1,6 @@
-import { AccessDefault, AccessScope, Predicate, type IEndpointMembers, type IReadOnlyMembers, type IWriteRules } from "@pragmatic-tech-ai/graph";
+import { AccessDefault, AccessScope, Predicate, type IEndpointMembers, type IReadOnlyMembers, type IWriteRules } from "@pragmatic-tech-ai/pragmatic-graph";
 import { ShareGrantScope, ShareRight, SystemNames, TodlNames, type IEnvironmentSecurity, type IShareSubjects } from "@pragmatic-tech-ai/todl/engine";
-import { AccessLevel, PrivilegeAction, type Principal } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, PrivilegeAction, type Principal } from "@pragmatic-tech-ai/pragmatic-identity";
 import { AccessDepthEvaluator } from "../security/access-depth-evaluator.js";
 import type { RealmSecurityModel } from "../security/realm-security-model.js";
 import type { Tier1Diagnostic } from "../security/tier1-diagnostic.js";

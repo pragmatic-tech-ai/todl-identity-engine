@@ -1,4 +1,4 @@
-// Public barrel for @pragmatic-tech-ai/todl-identity-engine.
+// Public barrel for @pragmatic-tech-ai/pragmatic-identity-engine-binding.
 export { SecurityVocabulary } from "./security/security-vocabulary.js";
 export { Tier1Diagnostic, Tier1DiagnosticCode } from "./security/tier1-diagnostic.js";
 export { EffectiveRoleTable } from "./security/effective-role-table.js";

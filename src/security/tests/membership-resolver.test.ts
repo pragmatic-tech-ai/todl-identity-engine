@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BusinessUnitHierarchy, IdpUserState, TeamMembershipRows } from "@pragmatic-tech-ai/todl-identity";
+import { BusinessUnitHierarchy, IdpUserState, TeamMembershipRows } from "@pragmatic-tech-ai/pragmatic-identity";
 import { MembershipResolver } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";
 

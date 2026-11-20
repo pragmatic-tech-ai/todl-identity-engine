@@ -1,5 +1,5 @@
 import { SecurityAction, SecurityDepth } from "@pragmatic-tech-ai/todl";
-import { PrivilegeAction, AccessLevel } from "@pragmatic-tech-ai/todl-identity";
+import { PrivilegeAction, AccessLevel } from "@pragmatic-tech-ai/pragmatic-identity";
 
 /** Exhaustive value maps between the compiler's security vocabulary (todl) and the identity model's (todl-identity). */
 export class SecurityVocabulary

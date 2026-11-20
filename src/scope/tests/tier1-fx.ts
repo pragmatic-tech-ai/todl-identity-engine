@@ -1,10 +1,10 @@
-import { MemberKind, ValueType, type IDefinitionDescription, type ISchemaDescription, type MemberInput } from "@pragmatic-tech-ai/graph";
+import { MemberKind, ValueType, type IDefinitionDescription, type ISchemaDescription, type MemberInput } from "@pragmatic-tech-ai/pragmatic-graph";
 import { SecurityAction, SecurityDepth, type IEdgeConcept, type IPackageRole, type IPackageSecurity } from "@pragmatic-tech-ai/todl";
 import { ShareRight, SystemNames, TodlNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
 import {
     AccessLevel, BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind, PrivilegeAction,
     type IProfileAssignmentConfig, type IRoleOverrideConfig, type ISecurityModelConfig,
-} from "@pragmatic-tech-ai/todl-identity";
+} from "@pragmatic-tech-ai/pragmatic-identity";
 import { RealmSecurityModel, type ITier1Catalog } from "../../index.js";
 
 /** Options for one Tier1Fx environment setting. */

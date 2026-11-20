@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AccessLevel, BaseRole, PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, BaseRole, PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import type { IPackageSecurity } from "@pragmatic-tech-ai/todl";
 import { EffectiveRoleTable, Tier1DiagnosticCode } from "../../index.js";
 import { EngineSecurityFx } from "./engine-security-fx.js";

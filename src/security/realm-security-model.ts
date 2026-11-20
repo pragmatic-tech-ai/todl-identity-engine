@@ -1,4 +1,4 @@
-import { BusinessUnitHierarchy, IdpDirectorySnapshot, SecurityModelValidator, TeamMembershipRows, type ISecurityModelConfig, type Principal } from "@pragmatic-tech-ai/todl-identity";
+import { BusinessUnitHierarchy, IdpDirectorySnapshot, SecurityModelValidator, TeamMembershipRows, type ISecurityModelConfig, type Principal } from "@pragmatic-tech-ai/pragmatic-identity";
 import { MembershipResolver } from "./membership-resolver.js";
 
 /** Where a principal sits in the business-unit tree. */

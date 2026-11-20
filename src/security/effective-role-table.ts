@@ -1,6 +1,6 @@
 import type { IPackageRole } from "@pragmatic-tech-ai/todl";
 import { SystemNames, TodlNames, type IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
-import { AccessLevel, BaseRole, type IRoleOverrideConfig, type PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, BaseRole, type IRoleOverrideConfig, type PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import { SecurityVocabulary } from "./security-vocabulary.js";
 import { Tier1Diagnostic, Tier1DiagnosticCode } from "./tier1-diagnostic.js";
 

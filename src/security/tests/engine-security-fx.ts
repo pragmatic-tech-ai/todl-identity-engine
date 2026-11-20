@@ -1,6 +1,6 @@
 import { SecurityAction, SecurityDepth, type IEdgeConcept, type IPackageSecurity } from "@pragmatic-tech-ai/todl";
 import type { IEnvironmentSecurity } from "@pragmatic-tech-ai/todl/engine";
-import { BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind, type ISecurityModelConfig } from "@pragmatic-tech-ai/todl-identity";
+import { BaseRole, IdpDirectorySnapshot, IdpUserState, Principal, PrincipalKind, type ISecurityModelConfig } from "@pragmatic-tech-ai/pragmatic-identity";
 
 /** The `hr` (spec §9.1) and `projects` (spec §9.2) environment, as plain C2/C5 object literals. */
 export class EngineSecurityFx

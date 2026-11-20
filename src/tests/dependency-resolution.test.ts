@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 
 // Resolution guard: the three sibling packages must resolve from compiled dist, and
 // the graph package is the same module instance TODL links (one Predicate class).
-import { AccessScope, Predicate } from "@pragmatic-tech-ai/graph";
+import { AccessScope, Predicate } from "@pragmatic-tech-ai/pragmatic-graph";
 import { ShareGrantScope } from "@pragmatic-tech-ai/todl/engine";
-import { BaseRole } from "@pragmatic-tech-ai/todl-identity";
+import { BaseRole } from "@pragmatic-tech-ai/pragmatic-identity";
 
 test("graph resolves AccessScope and Predicate", () =>
 {

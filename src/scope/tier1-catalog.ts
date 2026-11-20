@@ -1,4 +1,4 @@
-import { BindingTable, type IBindingDescription, type IDefinitionDescription, type ISchemaDescription } from "@pragmatic-tech-ai/graph";
+import { BindingTable, type IBindingDescription, type IDefinitionDescription, type ISchemaDescription } from "@pragmatic-tech-ai/pragmatic-graph";
 
 /** What the tier-1 compiler reads of an environment's catalog; TODL's `IEnvironmentCatalog` satisfies it structurally. */
 export interface ITier1Catalog

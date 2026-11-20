@@ -1,4 +1,4 @@
-import { SystemPrincipal, type BusinessUnitHierarchy, type IdpDirectorySnapshot, type ISecurityModelConfig, type Principal, type TeamMembershipRows } from "@pragmatic-tech-ai/todl-identity";
+import { SystemPrincipal, type BusinessUnitHierarchy, type IdpDirectorySnapshot, type ISecurityModelConfig, type Principal, type TeamMembershipRows } from "@pragmatic-tech-ai/pragmatic-identity";
 
 export interface IMembership
 {

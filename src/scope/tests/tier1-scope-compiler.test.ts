@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { AccessDefault, Compare, CompareOp, ConceptIs, In, Not, Or, Predicate, type AccessScope } from "@pragmatic-tech-ai/graph";
+import { AccessDefault, Compare, CompareOp, ConceptIs, In, Not, Or, Predicate, type AccessScope } from "@pragmatic-tech-ai/pragmatic-graph";
 import { ShareGrantScope, ShareRight, SystemNames, TodlNames } from "@pragmatic-tech-ai/todl/engine";
-import { AccessLevel, PrivilegeAction } from "@pragmatic-tech-ai/todl-identity";
+import { AccessLevel, PrivilegeAction } from "@pragmatic-tech-ai/pragmatic-identity";
 import { Tier1ScopeCompiler } from "../../index.js";
 import { Tier1Fx, type ITier1FxOptions } from "./tier1-fx.js";
 
