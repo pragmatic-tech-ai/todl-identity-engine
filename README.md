@@ -1,3 +1,5 @@
+> **Archived (2026-11-21).** This package moved into [pragmatic-env-server](https://github.com/pragmatic-tech-ai/pragmatic-env-server) as the workspace package `packages/pragmatic-identity-engine-binding`, its only consumer; it is no longer published here.
+
 # @pragmatic-tech-ai/pragmatic-identity-engine-binding
 
 The bridge engine that binds the TODL security model to the
